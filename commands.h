@@ -29,8 +29,6 @@ void run_command(editor* cedit, char* cmd);
 #ifdef COMMANDS_IMPLEMENTATION
 
 static void cmd_quit(editor* cedit, const char* arg) {
-    printf("\033[?25h");
-    printf("\033[?1049l");
     exit(0);
 }
 

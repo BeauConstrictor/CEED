@@ -14,23 +14,6 @@
 
 #define GREETING "CEDIT - C Language EDITor (v0.1.0)"
 
-char getch(void) {
-    struct termios oldt, newt;
-    char ch;
-
-    tcgetattr(STDIN_FILENO, &oldt);
-    newt = oldt;
-
-    newt.c_lflag &= ~(ICANON | ECHO);
-
-    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-
-    ch = getchar();
-
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    return ch;
-}
-
 void draw_editor(editor* cedit) {
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
@@ -59,6 +42,7 @@ void handle_normal_mode_key(editor *cedit, char key) {
 
         case 'a':
             cursor_right(cedit->buf);
+            // fallthrough to reuse 'i' key logic
         case 'i':
             sprintf(cedit->status, "-- INSERT --");
             cedit->mode = insert;
@@ -136,6 +120,25 @@ void handle_key(editor* cedit, char key) {
     }
 }
 
+struct termios oldt, newt;
+
+void initialise_terminal() {
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
+    printf("\033[?25l");
+    printf("\033[?1049h");
+}
+
+void cleanup_terminal() {
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+
+    printf("\033[?25h");
+    printf("\033[?1049l");
+}
+
 int main(void) {
     editor cedit;
     cedit.mode = normal;
@@ -143,13 +146,13 @@ int main(void) {
     
     cedit.buf = create_buf(65536);
 
-    printf("\033[?25l");
-    printf("\033[?1049h");
+    initialise_terminal();
+    atexit(cleanup_terminal);
 
     while (true) {
         draw_editor(&cedit);
     
-        char key = getch();
+        char key = getchar();
         handle_key(&cedit, key);
     }
 

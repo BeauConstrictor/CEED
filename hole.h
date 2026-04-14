@@ -13,9 +13,10 @@
 #ifndef HOLE_H
 #define HOLE_H
 
-#include "constants.h"
+#define BLUE "\033[34m"
+#define YELLOW "\033[33m"
+#define RESET "\033[0m"
 
-#include <termios.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <stddef.h>
@@ -93,6 +94,7 @@ buffer* create_buf(size_t size) {
 // free a buffer from the heap
 void free_buf(buffer* buf) {
     free(buf->start);
+    free(buf->path);
     free(buf);
 }
 
