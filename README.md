@@ -3,6 +3,10 @@
 CEED is an extremely lightweight vi-like text editor designed for
 remoting into embedded devices (serial/telnet).
 
+<center>
+    <img src="assets/demo.png" alt="screenshot of CEED" width="400">
+</center>
+
 CEED implements the most basic full-screen modal editor possible,
 in order to minimise overhead on low-power devices and reduce the
 'death by ANSI' that makes most full-screen editors unusable on slow
