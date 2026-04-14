@@ -38,7 +38,7 @@ static void cmd_echo(editor* cedit, const char* arg) {
 
 static void cmd_edit(editor* cedit, const char* arg) {
     free_buf(cedit->buf);
-    cedit->buf = create_buf(65536);
+    cedit->buf = create_buf(INITIAL_BUFFER_SIZE);
     sprintf(cedit->buf->path, "%s", arg);
 
     FILE* f = fopen(arg, "r");

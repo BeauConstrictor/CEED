@@ -3,11 +3,16 @@
  *          simple and lightweight, designed for embedded systems.
  *
  * Hole is licensed under the open source MIT license. For more
- * details see https://opensource.org/license/MIT. Copyright 2026
+ * details see https://opensource.org/license/MIT. Copyright 2026,
  * Beau Constrictor.
  *
  * To build this, in one source file that includes this file do:
  *     #define HOLE_IMPLEMENTATION
+ *
+ * Hole is a component of CEDIT, a lightweight text editor, but is
+ * perfectly capable of powering your own text editor. All the
+ * documentation you will need is in this file.
+ *
  */
 
 #ifndef HOLE_H
@@ -17,6 +22,7 @@
 #define YELLOW "\033[33m"
 #define RESET "\033[0m"
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <stddef.h>
@@ -32,6 +38,7 @@ typedef struct {
 
     unsigned int scroll; // lines from top
     char* path;  // string path of the buffer
+    bool dirty;
 } buffer;
 
 buffer* create_buf(size_t size);
@@ -88,6 +95,8 @@ buffer* create_buf(size_t size) {
     assert(buf->path != NULL);
     *buf->path = '\0';
 
+    buf->dirty = false;
+
     return buf;
 }
 
@@ -104,6 +113,8 @@ void buf_insertc(buffer* buf, char ch) {
 
     *buf->gap = ch;
     buf->gap++;
+
+    buf->dirty = true;
 }
 
 void buf_inserts(buffer* buf, const char* str) {
@@ -116,6 +127,8 @@ void buf_inserts(buffer* buf, const char* str) {
 void buf_backspace(buffer* buf) {
     if (buf->gap <= buf->start) return;
     buf->gap--;
+
+    buf->dirty = true;
 }
 
 // move one character from before the gap to after it

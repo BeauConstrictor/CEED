@@ -1,3 +1,24 @@
+/*
+ * ceed.c - an extremely lightweight vi-like text editor designed for
+ *          remoting into embedded devices (serial/telnet).
+ *
+ * CEED is licensed under the open source MIT license. For more 
+ * details see https://opensource.org/license/MIT. Copyright 2026,
+ * Beau Constrictor.
+ *
+ * CEED has no dependencies besides libc, and uses straightforward
+ * code with minimal macros, so is easy to read and learn from. The
+ * core, hole.h (a generic, performant text buffer implementation),
+ * is easy to use as a starting point for your own text editor
+ * project.
+ *
+ */
+
+// TODO:
+// * print all output to a screen buffer and diff it with the 
+//   previous buffer, manually moving cursor and drawing changes
+//   only.
+
 #include "hole.h"
 #include "editor.h"
 #include "commands.h"
@@ -12,17 +33,17 @@
 #include <string.h>
 #include <stdio.h>
 
-#define GREETING "CEDIT - C Language EDITor (v0.1.0)"
+#define GREETING "CEED - C Embedded EDitor (v0.1.0)"
 
 void draw_editor(editor* cedit) {
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
 
-   printf("\033[H\033[2J");
+    printf("\033[H\033[2J");
 
-   print_buf(cedit->buf, w.ws_row-1);
-   printf("\n%s", cedit->status);
-   if (cedit->mode == command) printf("\033[7m \033[0m");
+    print_buf(cedit->buf, w.ws_row-1);
+    printf("\n%s", cedit->status);
+    if (cedit->mode == command) printf("\033[7m \033[0m");
 }
 
 void handle_normal_mode_key(editor *cedit, char key) {
@@ -143,8 +164,8 @@ int main(void) {
     editor cedit;
     cedit.mode = normal;
     snprintf(cedit.status, sizeof(cedit.status), GREETING);
-    
-    cedit.buf = create_buf(65536);
+   
+    cedit.buf = create_buf(INITIAL_BUFFER_SIZE);
 
     initialise_terminal();
     atexit(cleanup_terminal);

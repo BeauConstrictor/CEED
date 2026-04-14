@@ -1,5 +1,5 @@
-cedit: *.c *.h 
-	gcc main.c -o cedit
+ceed: *.c *.h 
+	gcc ceed.c -o ceed
 
-run: cedit
-	./cedit
+run: ceed
+	./ceed
