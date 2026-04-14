@@ -106,10 +106,10 @@ static void cmd_write(editor* ceed, const char* arg) {
 
 static ex_command commands[] = {
     { "q",         cmd_quit          },
-    { "!q",        cmd_force_quit    },
+    { "q!",        cmd_force_quit    },
     { "echo",      cmd_echo          },
     { "e",         cmd_edit          },
-    { "!e",        cmd_force_edit    },
+    { "e!",        cmd_force_edit    },
     { "path",      cmd_path          },
     { "w",         cmd_write         },
 };
