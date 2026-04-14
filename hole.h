@@ -29,6 +29,7 @@
 #include <stdio.h>
 
 #define MAX_BUF_PATH_LENGTH 80
+#define LINE_NUM_WIDTH "5"
 
 typedef struct {
     char* start; // first byte of buffer
@@ -196,7 +197,7 @@ void print_buf(const buffer* buf, size_t height) {
     const char* ch = buf->start;
     size_t line = 0;
 
-    printf(YELLOW"%4d "RESET, line+1);
+    printf(YELLOW"%"LINE_NUM_WIDTH"d "RESET, line+1);
 
     while (ch < buf->end) {
         if (ch == buf->gap) {
@@ -211,7 +212,7 @@ void print_buf(const buffer* buf, size_t height) {
                 printf("\033[7m \033[0m");
                 line++;
                 if (line >= height) break;
-                printf(YELLOW"\n%4d "RESET, line+1);
+                printf(YELLOW"\n%"LINE_NUM_WIDTH"d "RESET, line+1);
             } else {
                 printf("\033[7m%c\033[0m", *cursor);
             }
@@ -223,7 +224,7 @@ void print_buf(const buffer* buf, size_t height) {
         if (*ch == '\n') {
             line++;
             if (line >= height) break;
-            printf(YELLOW"\n%4d "RESET, line+1);
+            printf(YELLOW"\n%"LINE_NUM_WIDTH"d "RESET, line+1);
         } else {
             putchar(*ch);
         }
