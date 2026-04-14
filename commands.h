@@ -21,7 +21,7 @@ typedef struct {
     command_handler handler;
 } ex_command;
 
-
+// modifies cmd, make sure you strncpy beforehand
 void run_command(editor* ceed, char* cmd);
 
 #endif // COMMANDS_H

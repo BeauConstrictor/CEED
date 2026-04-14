@@ -1,0 +1,98 @@
+.TH CEED 1 "April 2026" "ceed 0.1.0"
+
+.SH NAME
+ceed \- C Embedded EDitor, an extremely lightweight fullscreen
+modal text editor for embedded systems.
+
+.SH SYNOPSIS
+.B ceed
+[\fIFILE\fR]
+
+.SH DESCRIPTION
+
+CEED is an extremely lightweight vi-like text editor designed for
+remoting into embedded devices (serial/telnet).
+
+CEED implements the most basic full-screen modal editor possible,
+in order to minimise overhead on low-power devices and reduce the
+'death by ANSI' that makes most full-screen editors unusable on slow
+connections.
+
+The codebase has no dependencies besides libc, and is straightforward
+enough to serve as a learning experience in building larger scale
+command-line programs in C.
+
+The core of CEED, \fIhole.h\fR is an independent header-only library
+that you can easily use to create your own text editor, and possibly
+take in a completely different direction - \fIhole.h\fR is not at all
+opinionated.
+
+CEED is a modal text editor, meaning the same key can perform
+a different action depending on the active mode. The default mode
+is 'normal' mode, where your keys help you navigate around the
+buffer. From normal mode, you can switch to the other modes in order
+to perform other kinds of actions, and you can always hit
+.B ESC
+in order to return to normal mode.
+
+.SH OPTIONS
+.TP
+\fB\-h, \-\-help\fR
+show help
+
+.SH MODES
+
+.SS NORMAL
+Normal mode's primary purpose is to navigate around the buffer
+.TP
+.B hjkl
+Move cursor left, down, up and right, respectively.
+.TP
+.B i
+Enter insert mode
+.TP
+.B a
+Move cursor right once, and enter insert mode
+.TP
+.B :
+Switch to command mode
+
+.SS INSERT
+Insert mode is where you enter new text into the document, and
+delete old text with
+.B BACKSPACE.
+
+.SS COMMAND
+Command mode allows you to perform a larger set of less common
+actions, with the assumption that they will be used less frequently,
+so they are assigned longer 'commands' instead of single keys. To
+enter a command, type it's name, followed by an optional argument and
+hit enter. Most of these commands also exist in vim, so as not to
+mess with muscle memory.
+.TP
+.B :q
+Exit CEED. This will fail if your buffer is unsaved. To quit anyway,
+use :q!
+.TP
+.B :w [\fIFILE\fR]
+Save the buffer to a file. If no file is given, it will be saved to
+the path that was originally opened, or will give an error.
+.TP
+.B :e [\fIFILE\fR]
+Replace the buffer with a new one. If file is given, then it's
+contents will be written into the buffer. If the file does not exist,
+the buffer will be blank.
+.TP
+.B echo [\fITEXT\fR]
+A test command that will simply show you back the text that you
+entered.
+.TP
+.B path
+Will show you the path of the open buffer. This is where the buffer
+will be saved to if you run \fB:w\fR without passing \fI[FILE]\fR.
+
+.SH SEE ALSO
+\fIvi(1)\fR, \fIvim(1)\fR
+
+.SH AUTHOR
+    Written by Beau Constrictor.
