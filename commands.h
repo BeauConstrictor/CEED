@@ -60,6 +60,8 @@ static void cmd_force_edit(editor* ceed, const char* arg) {
     } else {
         sprintf(ceed->status, "'%s', [New]", arg);
     }
+
+    ceed->buf->dirty = false;
 }
 
 static void cmd_edit(editor* ceed, const char* arg) {
