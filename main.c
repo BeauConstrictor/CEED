@@ -56,10 +56,14 @@ void handle_normal_mode_key(editor *cedit, char key) {
         case 'l':
             cursor_right(cedit->buf);
             break;
+
+        case 'a':
+            cursor_right(cedit->buf);
         case 'i':
             sprintf(cedit->status, "-- INSERT --");
             cedit->mode = insert;
             break;
+
         case ':':
             sprintf(cedit->status, ":");
             cedit->mode = command;
