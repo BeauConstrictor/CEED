@@ -242,7 +242,7 @@ void buf_insertf(buffer* buf, FILE* f) {
     int ch;
     while ((ch = fgetc(f)) != EOF) {
         unsigned char byte = (unsigned char)ch;
-        buf_insertc(buf, ch);
+        buf_insertc(buf, byte);
     }
 }
 

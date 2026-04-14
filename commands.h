@@ -106,6 +106,10 @@ static void cmd_write(editor* ceed, const char* arg) {
     sprintf(ceed->status, "'%s', %d bytes written", path, len);
 }
 
+static void cmd_discard(editor* ceed, const char* arg) {
+    ceed->buf->dirty = false;
+}
+
 static ex_command commands[] = {
     { "q",         cmd_quit          },
     { "q!",        cmd_force_quit    },
@@ -114,6 +118,7 @@ static ex_command commands[] = {
     { "e!",        cmd_force_edit    },
     { "path",      cmd_path          },
     { "w",         cmd_write         },
+    { "discard",   cmd_discard       },
 };
 
 static const size_t cmd_count = sizeof(commands) / sizeof(commands[0]);
