@@ -72,7 +72,7 @@ mess with muscle memory.
 .TP
 .B :q
 Exit CEED. This will fail if your buffer is unsaved. To quit anyway,
-use :q!
+use \fB:q!\fR
 .TP
 .B :w [\fIFILE\fR]
 Save the buffer to a file. If no file is given, it will be saved to
@@ -81,7 +81,8 @@ the path that was originally opened, or will give an error.
 .B :e [\fIFILE\fR]
 Replace the buffer with a new one. If file is given, then it's
 contents will be written into the buffer. If the file does not exist,
-the buffer will be blank.
+the buffer will be blank. This will fail if your buffer is unsaved.
+To discard anyway, use \fB:e!\fR.
 .TP
 .B echo [\fITEXT\fR]
 A test command that will simply show you back the text that you
