@@ -44,6 +44,7 @@ typedef struct {
 buffer* create_buf(size_t size);
 void free_buf(buffer* buf);
 
+// marks the buffer as 'dirty'
 void buf_insertc(buffer* buf, char ch);
 void buf_inserts(buffer* buf, const char* str);
 void buf_insertf(buffer* buf, FILE* f);
@@ -70,9 +71,10 @@ void cursor_right(buffer* buf);
 // scroll, vi-style.
 void print_buf(const buffer* buf, size_t height);
 
-void buf_fwrite(const buffer* buf, FILE* f);
+// marks the buffer as 'clean'
+void buf_fwrite(buffer* buf, FILE* f);
 // TODO: implement
-void buf_snprint(const buffer* buf, char* str, size_t n);
+// void buf_snprint(const buffer* buf, char* str, size_t n);
 
 #endif
 
@@ -243,7 +245,7 @@ void buf_insertf(buffer* buf, FILE* f) {
     }
 }
 
-void buf_fwrite(const buffer* buf, FILE* f) {
+void buf_fwrite(buffer* buf, FILE* f) {
     char* ch = buf->start;
 
     while (ch < buf->end) {
@@ -253,7 +255,9 @@ void buf_fwrite(const buffer* buf, FILE* f) {
         }
         fputc(*ch, f);
         ch++;
-    }    
+    }
+
+    buf->dirty = false;
 }
 
 #endif // HOLE_IMPLEMENTATION

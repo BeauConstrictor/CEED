@@ -35,108 +35,116 @@
 
 #define GREETING "CEED - C Embedded EDitor (v0.1.0)"
 
-void draw_editor(editor* cedit) {
+static const char* HELP_MSG = 
+"Usage: ceed [FILE]\n"
+"\n"
+"Options:\n"
+"   -h, --help  Show this help message\n"
+"\n"
+"If FILE is not found, it will be created on save.\n";
+
+void draw_editor(editor* ceed) {
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
 
     printf("\033[H\033[2J");
 
-    print_buf(cedit->buf, w.ws_row-1);
-    printf("\n%s", cedit->status);
-    if (cedit->mode == command) printf("\033[7m \033[0m");
+    print_buf(ceed->buf, w.ws_row-1);
+    printf("\n%s", ceed->status);
+    if (ceed->mode == command) printf("\033[7m \033[0m");
 }
 
-void handle_normal_mode_key(editor *cedit, char key) {
+void handle_normal_mode_key(editor *ceed, char key) {
     switch (key) {
         case 'h':
-            cursor_left(cedit->buf);
+            cursor_left(ceed->buf);
             break;
         case 'j':
-            cursor_down(cedit->buf);
+            cursor_down(ceed->buf);
             break;
         case 'k':
-            cursor_up(cedit->buf);
+            cursor_up(ceed->buf);
             break;
         case 'l':
-            cursor_right(cedit->buf);
+            cursor_right(ceed->buf);
             break;
 
         case 'a':
-            cursor_right(cedit->buf);
+            cursor_right(ceed->buf);
             // fallthrough to reuse 'i' key logic
         case 'i':
-            sprintf(cedit->status, "-- INSERT --");
-            cedit->mode = insert;
+            sprintf(ceed->status, "-- INSERT --");
+            ceed->mode = insert;
             break;
 
         case ':':
-            sprintf(cedit->status, ":");
-            cedit->mode = command;
+            sprintf(ceed->status, ":");
+            ceed->mode = command;
             break;
 
         default:
-            sprintf(cedit->status, "%c", key);
+            sprintf(ceed->status, "%c", key);
     }
 }
 
-void handle_insert_mode_key(editor* cedit, char key) {
+void handle_insert_mode_key(editor* ceed, char key) {
     switch (key) {
         case '\b':
         case '\177':
-            buf_backspace(cedit->buf);
+            buf_backspace(ceed->buf);
             break;
 
         case '\033':
-            cedit->mode = normal;
-            sprintf(cedit->status, "");
+            ceed->mode = normal;
+            sprintf(ceed->status, "");
             break;
 
         default:
-            buf_insertc(cedit->buf, key);
+            buf_insertc(ceed->buf, key);
     }
 }
 
-void handle_command_mode_key(editor* cedit, char key) {
-    size_t cmd_len = strlen(cedit->status) - 1;
+void handle_command_mode_key(editor* ceed, char key) {
+    size_t cmd_len = strlen(ceed->status) - 1;
 
     switch (key) {
         case '\n':
             char cmd[STATUS_LENGTH];
-            strcpy(cmd, cedit->status+1);
-            run_command(cedit, cmd);
-            cedit->mode = normal;
+            strcpy(cmd, ceed->status+1);
+            run_command(ceed, cmd);
+            ceed->mode = normal;
             break;
 
         case '\b':
         case '\177':
             if (cmd_len < 1) break;
-            cedit->status[cmd_len] = '\0';
+            ceed->status[cmd_len] = '\0';
             break;
 
         case '\033':
-            cedit->mode = normal;
-            *cedit->status = '\0';
+            ceed->mode = normal;
+            *ceed->status = '\0';
             break;
 
         default:
-            if (strlen(cedit->status) >= STATUS_LENGTH) break;
-            cedit->status[cmd_len+1] = key;
-            cedit->status[cmd_len+2] = '\0';
+            if (strlen(ceed->status) >= STATUS_LENGTH) break;
+            ceed->status[cmd_len+1] = key;
+            ceed->status[cmd_len+2] = '\0';
     }
 }
 
-void handle_key(editor* cedit, char key) {
-    switch (cedit->mode) {
+void handle_key(editor* ceed, char key) {
+    switch (ceed->mode) {
         case normal:
-            handle_normal_mode_key(cedit, key);
+            handle_normal_mode_key(ceed, key);
             break;
 
         case insert:
-            handle_insert_mode_key(cedit, key);
+            handle_insert_mode_key(ceed, key);
             break;
 
         case command:
-            handle_command_mode_key(cedit, key);
+            handle_command_mode_key(ceed, key);
             break;
     }
 }
@@ -160,21 +168,35 @@ void cleanup_terminal() {
     printf("\033[?1049l");
 }
 
-int main(void) {
-    editor cedit;
-    cedit.mode = normal;
-    snprintf(cedit.status, sizeof(cedit.status), GREETING);
+int main(int argc, char* argv[]) {
+    editor ceed;
+    ceed.mode = normal;
+    snprintf(ceed.status, sizeof(ceed.status), GREETING);
    
-    cedit.buf = create_buf(INITIAL_BUFFER_SIZE);
+    ceed.buf = create_buf(INITIAL_BUFFER_SIZE);
+
+    if (argc > 2) {
+        fprintf(stderr, "ceed: too many arguments\n");
+        fprintf(stderr, "Try 'ceed --help' for more information.\n");
+        exit(1);
+    } else if (argc == 2 && (strcmp(argv[1], "--help") == 0 ||
+                             strcmp(argv[1],     "-h") == 0)) {
+        printf(HELP_MSG);
+        exit(0);
+    } else if (argc == 2) {
+        char command[STATUS_LENGTH] = "e ";
+        strncat(command, argv[1], STATUS_LENGTH-2);
+        run_command(&ceed, command);
+    }
 
     initialise_terminal();
     atexit(cleanup_terminal);
 
     while (true) {
-        draw_editor(&cedit);
+        draw_editor(&ceed);
     
         char key = getchar();
-        handle_key(&cedit, key);
+        handle_key(&ceed, key);
     }
 
     return 0;
