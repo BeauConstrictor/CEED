@@ -67,8 +67,8 @@ void cursor_right(buffer* buf);
 
 // use these to move the cursor up/down, by word, etc.
 // they move until a any character in the string until is found
-void cursor_right_until(buffer* buf, char* until);
-void cursor_left_until(buffer* buf, char* until);
+void cursor_right_until(buffer* buf, const char* until);
+void cursor_left_until(buffer* buf, const char* until);
 
 // draw height lines of the text buffer, starting at the buffer's
 // scroll, vi-style.
@@ -192,10 +192,10 @@ static void cursor_move_until(buffer* buf, const char* until,
     }
 }
 
-void cursor_left_until(buffer* buf, char* until) {
+void cursor_left_until(buffer* buf, const char* until) {
     cursor_move_until(buf, until, cursor_left, cursor_index);
 }
-void cursor_right_until(buffer* buf, char* until) {
+void cursor_right_until(buffer* buf, const char* until) {
     cursor_move_until(buf, until, cursor_right, backward_cursor_index);
 }
 
