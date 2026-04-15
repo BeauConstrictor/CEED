@@ -72,7 +72,7 @@ delete old text with
 Command mode allows you to perform a larger set of less common
 actions, with the assumption that they will be used less frequently,
 so they are assigned longer 'commands' instead of single keys. To
-enter a command, type it's name, followed by an optional argument and
+enter a command, type its name, followed by an optional argument and
 hit enter. Most of these commands also exist in vim, so as not to
 mess with muscle memory.
 .TP
@@ -84,12 +84,11 @@ use \fB:q!\fR
 Save the buffer to a file. If no file is given, it will be saved to
 the path that was originally opened, or will give an error.
 .TP
-.TP
 .B :wq [\fIFILE\fR]
 Combines the functions of \fB:w\fR and \fB:q\fR, effectively save and
 quit.
 .B :e [\fIFILE\fR]
-Replace the buffer with a new one. If file is given, then it's
+Replace the buffer with a new one. If file is given, then its
 contents will be written into the buffer. If the file does not exist,
 the buffer will be blank. This will fail if your buffer is unsaved.
 To discard anyway, use \fB:e!\fR.
