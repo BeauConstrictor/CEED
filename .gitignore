@@ -1,4 +1,5 @@
 *.swp
 ceed
 releases
-release/*
+releases/*
+changelog.txt

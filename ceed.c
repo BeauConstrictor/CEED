@@ -183,6 +183,9 @@ int main(int argc, char* argv[]) {
                              strcmp(argv[1],     "-h") == 0)) {
         printf(HELP_MSG);
         exit(0);
+    } else if (argc == 2 && strcmp(argv[1], "--version") == 0) {
+        printf("ceed (C Embedded EDitor) "CEED_VERSION"\n");
+        exit(0);
     } else if (argc == 2) {
         char command[STATUS_LENGTH] = "e ";
         strncat(command, argv[1], STATUS_LENGTH-2);

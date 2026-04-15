@@ -249,13 +249,21 @@ void buf_insertf(buffer* buf, FILE* f) {
 void buf_fwrite(buffer* buf, FILE* f) {
     char* ch = buf->start;
 
+    char last_ch = '\0';
+
     while (ch < buf->end) {
         if (ch == buf->gap) {
             ch = buf->after;
             if (ch == buf->end) break;
         }
         fputc(*ch, f);
+        last_ch = *ch;
         ch++;
+    }
+
+    ch--;
+    if (last_ch != '\n') {
+        fputc('\n', f);
     }
 
     buf->dirty = false;

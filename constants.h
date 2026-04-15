@@ -1,6 +1,8 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
+#define CEED_VERSION "v0.1.0"
+
 #define STATUS_LENGTH 80
 
 #define BLUE "\033[34m"
