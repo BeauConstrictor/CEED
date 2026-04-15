@@ -1,5 +1,5 @@
-ceed: *.c *.h 
-	gcc ceed.c -o ceed
+ceed: src/*
+	gcc src/ceed.c -o ceed
 
 run: ceed
 	./ceed
