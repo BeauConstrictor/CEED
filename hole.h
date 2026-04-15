@@ -61,12 +61,13 @@ size_t backward_cursor_index(const buffer* buf);
 // returns the number of characters in the entire buffer
 size_t buf_len(const buffer* buf);
 
-// move cursor left until a newline is reached
-void cursor_up(buffer* buf);
-// move cursor right until a newline is reached
-void cursor_down(buffer* buf);
 void cursor_left(buffer* buf);
 void cursor_right(buffer* buf);
+
+// use these to move the cursor up/down, by word, etc.
+// they move until a any character in the string until is found
+void cursor_right_until(buffer* buf, char* until);
+void cursor_left_until(buffer* buf, char* until);
 
 // draw height lines of the text buffer, starting at the buffer's
 // scroll, vi-style.
@@ -175,22 +176,28 @@ size_t backward_cursor_index(const buffer* buf) {
     return buf->end - buf->after;
 }
 
-void cursor_up(buffer* buf) {
-    while (cursor_index(buf) > 0) {
-        cursor_left(buf);
+typedef void (*buffer_void_fn)(buffer*);
+typedef size_t (*buffer_sizet_fn)(const buffer*);
+
+static void cursor_move_until(buffer* buf, const char* until,
+              buffer_void_fn move_cur, buffer_sizet_fn cur_idx) {
+    while (cur_idx(buf) > 0) {
+        move_cur(buf);
         char ch = char_under_cursor(buf);
-        if (ch == '\n' || ch == '\0') break;
-    } 
-    cursor_left(buf);
+
+        if (strchr(until, ch) != NULL) {
+            break;
+        }
+    }
 }
 
-void cursor_down(buffer* buf) {
-    while (backward_cursor_index(buf) > 0) {
-        cursor_right(buf);
-        char ch = char_under_cursor(buf);
-        if (ch == '\n' || ch == '\0') break;
-    } 
+void cursor_left_until(buffer* buf, char* until) {
+    cursor_move_until(buf, until, cursor_left, cursor_index);
 }
+void cursor_right_until(buffer* buf, char* until) {
+    cursor_move_until(buf, until, cursor_right, backward_cursor_index);
+}
+
 
 // print the contents of a text buffer
 void print_buf(const buffer* buf, size_t height) {

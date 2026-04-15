@@ -47,6 +47,8 @@ Normal mode's primary purpose is to navigate around the buffer
 .TP
 .B hjkl
 Move cursor left, down, up and right, respectively.
+.B bw
+Move cursor left and right by single words, respectively.
 .TP
 .B i
 Enter insert mode
@@ -56,6 +58,10 @@ Move cursor right once, and enter insert mode
 .TP
 .B :
 Switch to command mode
+.TP
+.B oO
+Create a new line below or above the cursor and start inserting
+there.
 
 .SS INSERT
 Insert mode is where you enter new text into the document, and
@@ -78,23 +84,29 @@ use \fB:q!\fR
 Save the buffer to a file. If no file is given, it will be saved to
 the path that was originally opened, or will give an error.
 .TP
+.TP
+.B :wq [\fIFILE\fR]
+Combines the functions of \fB:w\fR and \fB:q\fR, effectively save and
+quit.
 .B :e [\fIFILE\fR]
 Replace the buffer with a new one. If file is given, then it's
 contents will be written into the buffer. If the file does not exist,
 the buffer will be blank. This will fail if your buffer is unsaved.
 To discard anyway, use \fB:e!\fR.
 .TP
-.B echo [\fITEXT\fR]
+.B :echo [\fITEXT\fR]
 A test command that will simply show you back the text that you
 entered.
 .TP
-.B path
-Will show you the path of the open buffer. This is where the buffer
-will be saved to if you run \fB:w\fR without passing \fI[FILE]\fR.
+.B :check
+Returns the name
 .TP
-.B discard
+.B :discard
 Marks the current buffer as saved, without actually writing changes
 to a file.
+.TP
+.B :version
+Display the message from startup, which includes the version number.
 
 .SH SEE ALSO
 \fIvi(1)\fR, \fIvim(1)\fR

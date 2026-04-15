@@ -33,8 +33,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#define GREETING "CEED - C Embedded EDitor (v0.1.0)"
-
 static const char* HELP_MSG = 
 "Usage: ceed [FILE]\n"
 "\n"
@@ -59,15 +57,37 @@ void handle_normal_mode_key(editor *ceed, char key) {
         case 'h':
             cursor_left(ceed->buf);
             break;
-        case 'j':
-            cursor_down(ceed->buf);
-            break;
-        case 'k':
-            cursor_up(ceed->buf);
-            break;
         case 'l':
             cursor_right(ceed->buf);
             break;
+
+        case 'k':
+            cursor_right_until(ceed->buf, "\n");
+            break;
+        case 'j':
+            cursor_left_until(ceed->buf, "\n");
+            break;
+        case 'w':
+            cursor_right_until(ceed->buf, " \n");
+            break;
+        case 'b':
+            cursor_left_until(ceed->buf, " \n");
+            break;
+
+        case 'o':
+            if (char_under_cursor(ceed->buf) != '\n')
+                cursor_right_until(ceed->buf, "\n");
+            buf_insertc(ceed->buf, '\n');
+            ceed->mode = insert;
+            sprintf(ceed->status, "-- INSERT --");
+            break;
+        case 'O':
+            cursor_left_until(ceed->buf, "\n");
+            buf_insertc(ceed->buf, '\n');
+            ceed->mode = insert;
+            sprintf(ceed->status, "-- INSERT --");
+            break;
+
 
         case 'a':
             cursor_right(ceed->buf);
@@ -96,7 +116,7 @@ void handle_insert_mode_key(editor* ceed, char key) {
 
         case '\033':
             ceed->mode = normal;
-            sprintf(ceed->status, "");
+            cmd_check(ceed, NULL);
             break;
 
         default:
@@ -124,6 +144,7 @@ void handle_command_mode_key(editor* ceed, char key) {
         case '\033':
             ceed->mode = normal;
             *ceed->status = '\0';
+            cmd_check(ceed, NULL);
             break;
 
         default:

@@ -2,6 +2,7 @@
 #define CONSTANTS_H
 
 #define CEED_VERSION "v0.1.0"
+#define GREETING "CEED - C Embedded EDitor "CEED_VERSION
 
 #define STATUS_LENGTH 80
 
