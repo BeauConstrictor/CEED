@@ -11,6 +11,6 @@
 #define RED "\033[31m"
 #define RESET "\033[0m"
 
-#define INITIAL_BUFFER_SIZE 65536
+#define INITIAL_BUFFER_SIZE 8192
 
 #endif // CONSTANTS_H

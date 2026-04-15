@@ -44,6 +44,7 @@ typedef struct {
 } buffer;
 
 buffer* create_buf(size_t size);
+buffer* expand_buf(buffer* buf, size_t new_size);
 void free_buf(buffer* buf);
 
 // marks the buffer as 'dirty'
@@ -61,6 +62,8 @@ size_t cursor_index(const buffer* buf);
 size_t backward_cursor_index(const buffer* buf);
 // returns the number of characters in the entire buffer
 size_t buf_len(const buffer* buf);
+// maximum number of characters the buffer can hold
+size_t buf_size(const buffer* buf);
 
 void cursor_left(buffer* buf);
 void cursor_right(buffer* buf);
@@ -103,6 +106,25 @@ buffer* create_buf(size_t size) {
     buf->dirty = false;
 
     return buf;
+}
+
+buffer* expand_buf(buffer* buf, size_t new_size) {
+    assert(new_size > buf_len(buf));
+
+    buffer* new_buf = create_buf(new_size);
+
+    size_t cu_idx = cursor_index(buf);
+    size_t bc_idx = backward_cursor_index(buf);
+
+    memcpy(new_buf->start,      buf->start, cu_idx);
+    memcpy(new_buf->end-bc_idx, buf->after, bc_idx);
+
+    new_buf->gap = new_buf->start + cu_idx;
+    new_buf->after = new_buf->end - bc_idx;
+
+    free_buf(buf);
+
+    return new_buf;
 }
 
 // free a buffer from the heap
@@ -171,6 +193,10 @@ size_t cursor_index(const buffer* buf) {
 
 size_t buf_len(const buffer* buf) {
     return (buf->end - buf->start) - (buf->after - buf->gap);
+}
+
+size_t buf_size(const buffer* buf) {
+    return buf->end - buf->start;
 }
 
 size_t backward_cursor_index(const buffer* buf) {
