@@ -44,6 +44,9 @@ typedef struct {
 } buffer;
 
 buffer* create_buf(size_t size);
+// most insert operations will fail silently if the buffer does not
+// have enough space. to prevent this, ensure you check free buffer
+// space (buf_size() - buf_len()) before inserting.
 buffer* expand_buf(buffer* buf, size_t new_size);
 void free_buf(buffer* buf);
 

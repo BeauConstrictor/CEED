@@ -224,7 +224,6 @@ int main(int argc, char* argv[]) {
 
         if (buf_size(ceed.buf) - buf_len(ceed.buf) < 2) {
             ceed.buf = expand_buf(ceed.buf, buf_size(ceed.buf)*2);
-            sprintf(ceed.status, "expanded buffer to %d bytes", buf_size(ceed.buf));
          } 
     }
 
