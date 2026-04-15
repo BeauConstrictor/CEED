@@ -110,6 +110,11 @@ static void cmd_discard(editor* ceed, const char* arg) {
     ceed->buf->dirty = false;
 }
 
+static void cmd_writequit(editor* ceed, const char* arg) {
+    cmd_write(ceed, arg);
+    cmd_quit(ceed, arg); // ignores the argument, so this is fine
+}
+
 static ex_command commands[] = {
     { "q",         cmd_quit          },
     { "q!",        cmd_force_quit    },
@@ -119,6 +124,7 @@ static ex_command commands[] = {
     { "path",      cmd_path          },
     { "w",         cmd_write         },
     { "discard",   cmd_discard       },
+    { "wq",        cmd_writequit     },
 };
 
 static const size_t cmd_count = sizeof(commands) / sizeof(commands[0]);

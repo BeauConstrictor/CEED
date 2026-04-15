@@ -1,2 +1,4 @@
 *.swp
 ceed
+releases
+release/*
