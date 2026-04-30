@@ -15,23 +15,22 @@
  */
 
 // TODO:
-// * print all output to a screen buffer and diff it with the
-//   previous buffer, manually moving cursor and drawing changes
-//   only.
+// * add multi-character key combos in normal mode, such as gg to go
+//   to start of buffer.
 
 #include "commands.h"
 #include "editor.h"
 #include "hole.h"
 
-#include "constants.h"
 #include "implementations.h"
+#include "constants.h"
 
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
 #include <sys/ioctl.h>
 #include <termios.h>
+#include <stdbool.h>
+#include <string.h>
 #include <unistd.h>
+#include <stdio.h>
 
 static const char *HELP_MSG =
     "Usage: ceed [FILE]\n"
@@ -47,10 +46,53 @@ void draw_editor(editor *ceed) {
 
   printf("\033[H\033[2J");
 
-  print_buf(ceed->buf, w.ws_row - 1);
+  int curx;
+  int cury;
+  print_buf(ceed->buf, w.ws_row - 1, &curx, &cury);
+
   printf("\n%s", ceed->status);
-  if (ceed->mode == command)
-    printf("\033[7m \033[0m");
+  if (ceed->mode != command) 
+    printf("\033[%d;%dH", cury, curx);
+
+  printf("\033[%d q", ceed->cursor_shape);
+  fflush(stdout);
+}
+
+void chmode(editor *ceed, editor_mode mode) {
+  switch (mode) {
+    case normal:
+      ceed->mode = normal;
+      cmd_check(ceed, NULL);
+      ceed->cursor_shape = 0;
+     break;
+
+     case insert:
+      ceed->mode = insert;
+      sprintf(ceed->status, "-- INSERT --");
+      ceed->cursor_shape = 6;
+      break;
+
+    case command:
+      ceed->mode = command;
+      sprintf(ceed->status, ":");
+      ceed->cursor_shape = 4;
+      break;
+  }
+}
+
+char *resolve_binding(binding *bind, char key, editor *ceed) {
+  char *cmd = NULL;
+
+  while (bind) {
+    if (key == bind->key) {
+      cmd = strdup(bind->cmd);
+      break;
+    } else {
+      bind = bind->next;
+    }
+  }
+
+  return cmd;
 }
 
 void handle_normal_mode_key(editor *ceed, char key) {
@@ -68,42 +110,56 @@ void handle_normal_mode_key(editor *ceed, char key) {
   case 'j':
     cursor_left_until(ceed->buf, "\n");
     break;
+
   case 'w':
-    cursor_right_until(ceed->buf, " \n");
+    cursor_right_until(ceed->buf, "\n ");
     break;
   case 'b':
-    cursor_left_until(ceed->buf, " \n");
+    cursor_left_until(ceed->buf, "\n ");
+    break;
+
+  case 'x':
+    buf_backspace(ceed->buf);
+    cursor_right(ceed->buf);
     break;
 
   case 'o':
     if (char_under_cursor(ceed->buf) != '\n')
       cursor_right_until(ceed->buf, "\n");
     buf_insertc(ceed->buf, '\n');
-    ceed->mode = insert;
-    sprintf(ceed->status, "-- INSERT --");
+    chmode(ceed, insert);
     break;
   case 'O':
     cursor_left_until(ceed->buf, "\n");
     buf_insertc(ceed->buf, '\n');
-    ceed->mode = insert;
-    sprintf(ceed->status, "-- INSERT --");
+    chmode(ceed, insert);
+    break;
+
+  case 'g':
+    cursor_left_until(ceed->buf, "\0");
+    break;
+  case 'G':
+    cursor_right_until(ceed->buf, "\0");
     break;
 
   case 'a':
     cursor_right(ceed->buf);
-    // fallthrough to reuse 'i' key logic
+    [[fallthrough]];
   case 'i':
-    sprintf(ceed->status, "-- INSERT --");
-    ceed->mode = insert;
+    chmode(ceed, insert);
     break;
 
   case ':':
-    sprintf(ceed->status, ":");
-    ceed->mode = command;
+    chmode(ceed, command);
     break;
 
   default:
-    sprintf(ceed->status, "%c", key);
+    char *cmd = resolve_binding(ceed->bindings, key, ceed);
+    if (!cmd) break;
+    sprintf(ceed->status, ":%s", cmd);
+    run_command(ceed, cmd);
+    free(cmd);
+    break;
   }
 }
 
@@ -115,8 +171,7 @@ void handle_insert_mode_key(editor *ceed, char key) {
     break;
 
   case '\033':
-    ceed->mode = normal;
-    cmd_check(ceed, NULL);
+    chmode(ceed, normal);
     break;
 
   default:
@@ -131,8 +186,8 @@ void handle_command_mode_key(editor *ceed, char key) {
   case '\n':
     char cmd[STATUS_LENGTH];
     strcpy(cmd, ceed->status + 1);
+    chmode(ceed, normal);
     run_command(ceed, cmd);
-    ceed->mode = normal;
     break;
 
   case '\b':
@@ -143,9 +198,7 @@ void handle_command_mode_key(editor *ceed, char key) {
     break;
 
   case '\033':
-    ceed->mode = normal;
-    *ceed->status = '\0';
-    cmd_check(ceed, NULL);
+    chmode(ceed, normal);
     break;
 
   default:
@@ -180,20 +233,19 @@ void initialise_terminal() {
   newt.c_lflag &= ~(ICANON | ECHO);
   tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
-  printf("\033[?25l");
   printf("\033[?1049h");
 }
 
 void cleanup_terminal() {
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 
-  printf("\033[?25h");
   printf("\033[?1049l");
 }
 
 int main(int argc, char *argv[]) {
   editor ceed;
   ceed.mode = normal;
+  ceed.bindings = NULL;
   snprintf(ceed.status, sizeof(ceed.status), GREETING);
 
   ceed.buf = create_buf(INITIAL_BUFFER_SIZE);

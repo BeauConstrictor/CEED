@@ -22,12 +22,13 @@
 #define YELLOW "\033[33m"
 #define RESET "\033[0m"
 
-#include <assert.h>
 #include <stdbool.h>
+#include <assert.h>
 #include <stddef.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <stdio.h>
 
 #define MAX_BUF_PATH_LENGTH 80
 #define LINE_NUM_WIDTH "5"
@@ -76,9 +77,11 @@ void cursor_right(buffer *buf);
 void cursor_right_until(buffer *buf, const char *until);
 void cursor_left_until(buffer *buf, const char *until);
 
+// get x and y of the terminal cursor, for help with drawing
+void get_cursor_pos(int *row, int *col);
 // draw height lines of the text buffer, starting at the buffer's
 // scroll, vi-style.
-void print_buf(const buffer *buf, size_t height);
+void print_buf(const buffer *buf, size_t height, int *curx, int *cury);
 
 // marks the buffer as 'clean'
 void buf_fwrite(buffer *buf, FILE *f);
@@ -231,8 +234,25 @@ void cursor_right_until(buffer *buf, const char *until) {
   cursor_move_until(buf, until, cursor_right, backward_cursor_index);
 }
 
-// print the contents of a text buffer
-void print_buf(const buffer *buf, size_t height) {
+void get_cursor_pos(int *row, int *col) {
+    char buf[32];
+    int i = 0;
+
+    printf("\033[6n");
+    fflush(stdout);
+
+    while (i < (int)sizeof(buf) - 1) {
+        if (read(0, &buf[i], 1) != 1) break;
+        if (buf[i] == 'R') break;
+        i++;
+    }
+    buf[i] = '\0';
+
+    sscanf(buf, "\033[%d;%dR", row, col);
+}
+
+// print the contents of a text buffer, vi-style
+void print_buf(const buffer *buf, size_t height, int *curx, int *cury) {
   const char *ch = buf->start;
   size_t line = 0;
 
@@ -240,21 +260,21 @@ void print_buf(const buffer *buf, size_t height) {
 
   while (ch < buf->end) {
     if (ch == buf->gap) {
+      get_cursor_pos(cury, curx);
+
       const char *cursor = buf->after;
 
-      if (cursor == buf->end) {
-        printf("\033[7m \033[0m");
+      if (cursor == buf->end)
         break;
-      }
 
       if (*cursor == '\n') {
-        printf("\033[7m \033[0m");
         line++;
         if (line >= height)
           break;
+
         printf(YELLOW "\n%" LINE_NUM_WIDTH "d " RESET, line + 1);
       } else {
-        printf("\033[7m%c\033[0m", *cursor);
+        putchar(*cursor);
       }
 
       ch = cursor + 1;

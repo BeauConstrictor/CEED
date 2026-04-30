@@ -74,11 +74,36 @@ void cmd_force_edit(editor *ceed, const char *arg) {
 }
 
 void cmd_edit(editor *ceed, const char *arg) {
-  if (ceed->buf->dirty) {
+  if (ceed->buf->dirty)
     sprintf(ceed->status, RED "No write since last change" RESET);
-  } else {
+  else
     cmd_force_edit(ceed, arg);
-  }
+}
+
+void cmd_bind(editor *ceed, const char *arg) {
+    if (strlen(arg) < 3 || *(arg+1) != ' ') {
+        sprintf(ceed->status, RED "Bad argument" RESET);
+        return;
+    }
+
+    binding *bind = malloc(sizeof(binding));
+    bind->next = NULL;
+    bind->key = *arg;
+    strcpy(bind->cmd, arg+2);
+    
+    if (ceed->bindings == NULL) {
+        ceed->bindings = bind;
+        return;
+    }
+
+    binding *last_bind = ceed->bindings;
+    while (1) {
+        if (last_bind->next)
+            last_bind = last_bind->next;
+        else
+            break;
+    }
+    last_bind->next = bind;
 }
 
 void cmd_check(editor *ceed, const char *arg) {
@@ -135,10 +160,14 @@ void cmd_version(editor *ceed, const char *arg) {
 }
 
 static ex_command commands[] = {
-    {"q", cmd_quit},          {"q!", cmd_force_quit},   {"echo", cmd_echo},
-    {"e", cmd_edit},          {"e!", cmd_force_edit},   {"check", cmd_check},
-    {"w", cmd_write},         {"discard", cmd_discard}, {"wq", cmd_writequit},
-    {"version", cmd_version},
+    { "q",       cmd_quit },  { "q!",   cmd_force_quit },
+    { "w",       cmd_write }, { "wq",   cmd_writequit },
+    { "e",       cmd_edit },  { "e!",   cmd_force_edit },
+    { "echo",    cmd_echo },
+    { "bind",    cmd_bind },
+    { "check",   cmd_check },
+    { "discard", cmd_discard }, 
+    { "version", cmd_version },
 };
 
 static const size_t cmd_count = sizeof(commands) / sizeof(commands[0]);
