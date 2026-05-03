@@ -36,7 +36,8 @@ static const char *HELP_MSG =
     "Usage: ceed [FILE]\n"
     "\n"
     "Options:\n"
-    "   -h, --help  Show this help message\n"
+    "   -h, --help     Show this help message\n"
+    "   -v, --version  Print version number\n"
     "\n"
     "If FILE is not found, it will be created on save.\n";
 

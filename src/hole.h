@@ -260,17 +260,20 @@ void get_cursor_pos(int *row, int *col) {
 void print_buf(buffer *buf, size_t height, int *curx, int *cury,
                int highlight_col, const char *eof_lines,
                const char *linenums) {
-  #define pb_next_line()                                 \
-    while (col < highlight_col) {                        \
-      col++;                                             \
-      printf(" ");                                       \
-    }                                                    \
-    if (col == highlight_col) printf("\033[90m|\033[0m"); \
-    col = 0;                                             \
-    line++;                                              \
-    if (line >= height) break;                           \
-    printf("\n");                                        \
-    if (linenums)                                        \
+  #define draw_highlight_col()                            \
+    while (col < highlight_col) {                         \
+      col++;                                              \
+      printf(" ");                                        \
+    }                                                     \
+    if (col == highlight_col) printf("\033[90m|\033[0m");
+
+  #define pb_next_line()                                  \
+    draw_highlight_col()                                  \
+    col = 0;                                              \
+    line++;                                               \
+    if (line >= height) break;                            \
+    printf("\n");                                         \
+    if (linenums)                                         \
       printf(linenums, scroll + line + 1);
 
   int scroll = buf->scroll;
@@ -322,6 +325,8 @@ void print_buf(buffer *buf, size_t height, int *curx, int *cury,
 
     ch++;
   }
+
+  draw_highlight_col();
 
   while (line < height - 1) {
     printf("%s", eof_lines);
