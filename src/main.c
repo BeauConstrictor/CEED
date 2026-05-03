@@ -40,6 +40,8 @@ static const char *HELP_MSG =
     "\n"
     "If FILE is not found, it will be created on save.\n";
 
+struct termios oldt, newt;
+
 void draw_editor(editor *ceed) {
   struct winsize w;
   ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
@@ -48,13 +50,15 @@ void draw_editor(editor *ceed) {
 
   int curx;
   int cury;
-  print_buf(ceed->buf, w.ws_row - 1, &curx, &cury);
+  print_buf(ceed->buf, w.ws_row - 1, &curx, &cury, 70,
+      "\n" BLUE "~" RESET, YELLOW "%5d " RESET);
 
   printf("\n%s", ceed->status);
   if (ceed->mode != command) 
     printf("\033[%d;%dH", cury, curx);
 
   printf("\033[%d q", ceed->cursor_shape);
+
   fflush(stdout);
 }
 
@@ -96,6 +100,9 @@ char *resolve_binding(binding *bind, char key, editor *ceed) {
 }
 
 void handle_normal_mode_key(editor *ceed, char key) {
+  struct winsize w;
+  ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+
   switch (key) {
   case 'h':
     cursor_left(ceed->buf);
@@ -140,6 +147,19 @@ void handle_normal_mode_key(editor *ceed, char key) {
     break;
   case 'G':
     cursor_right_until(ceed->buf, "\0");
+    break;
+
+  case 'd':
+    scroll_buf(ceed->buf, w.ws_row/2);
+    break;
+  case 'D':
+    scroll_buf(ceed->buf, 1);
+    break;
+  case 'u':
+    scroll_buf(ceed->buf, -w.ws_row/2);
+    break;
+  case 'U':
+    scroll_buf(ceed->buf, -1);
     break;
 
   case 'a':
@@ -225,8 +245,6 @@ void handle_key(editor *ceed, char key) {
   }
 }
 
-struct termios oldt, newt;
-
 void initialise_terminal() {
   tcgetattr(STDIN_FILENO, &oldt);
   newt = oldt;
@@ -234,12 +252,17 @@ void initialise_terminal() {
   tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
   printf("\033[?1049h");
+  printf("\033[2 q");
+  printf("\033[?25h");
+
+  setvbuf(stdout, malloc(8192), _IOFBF, 8192);
 }
 
 void cleanup_terminal() {
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 
   printf("\033[?1049l");
+  printf("\033[2 q");
 }
 
 int main(int argc, char *argv[]) {
@@ -262,8 +285,8 @@ int main(int argc, char *argv[]) {
     printf("ceed (C Embedded EDitor) " CEED_VERSION "\n");
     exit(0);
   } else if (argc == 2) {
-    char command[STATUS_LENGTH] = "e ";
-    strncat(command, argv[1], STATUS_LENGTH - 2);
+    char command[STATUS_LENGTH];
+    snprintf(command, STATUS_LENGTH - 2, "e %s", argv[1]);
     run_command(&ceed, command);
   }
 

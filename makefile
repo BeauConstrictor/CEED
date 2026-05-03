@@ -1,5 +1,12 @@
-ceed: *.c *.h 
-	gcc ceed.c -o ceed
+all: ceed
+
+build/:
+	mkdir -p build
+
+ceed: src/* build/
+	gcc src/*.c -o build/ceed
+
+.PHONY: all run
 
 run: ceed
-	./ceed
+	build/ceed src/main.c

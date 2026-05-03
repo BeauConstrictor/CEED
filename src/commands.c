@@ -1,12 +1,4 @@
-/*
- * commands.h - simple command dispatcher for ceed
- */
-
-#ifndef COMMANDS_H
-#define COMMANDS_H
-
 #include "constants.h"
-#include "editor.h"
 #include "hole.h"
 
 #include <errno.h>
@@ -14,20 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef void (*command_handler)(editor *, const char *arg);
-
-typedef struct {
-  const char *name;
-
-  command_handler handler;
-} ex_command;
-
-// modifies cmd, make sure you strncpy beforehand
-void run_command(editor *ceed, char *cmd);
-
-#endif // COMMANDS_H
-
-#ifdef COMMANDS_IMPLEMENTATION
+#include "commands.h"
 
 void cmd_force_quit(editor *ceed, const char *arg) { exit(0); }
 
@@ -64,6 +43,12 @@ void cmd_force_edit(editor *ceed, const char *arg) {
     fclose(f);
     size_t len = buf_len(ceed->buf);
     sprintf(ceed->status, "'%s', %d bytes", arg, len);
+    while (len) {
+      cursor_left(ceed->buf);
+      len--;
+    }
+    cursor_right_until(ceed->buf, "\n");
+    cursor_right_until(ceed->buf, "\n");
   } else if (*arg == '\0') {
     sprintf(ceed->status, "unnamed buffer, [new]");
   } else {
@@ -195,5 +180,3 @@ void run_command(editor *ceed, char *cmd) {
 
   sprintf(ceed->status, RED "Not an editor command: %s" RESET, cmd);
 }
-
-#endif // COMMANDS_IMPLEMENTATION

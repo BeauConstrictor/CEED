@@ -39,8 +39,8 @@ typedef struct {
   char *gap;   // first byte of gap
   char *after; // first byte after gap
 
-  unsigned int scroll; // lines from top
-  char *path;          // string path of the buffer
+  int scroll; // lines from top
+  char *path; // string path of the buffer
   bool dirty;
 } buffer;
 
@@ -81,7 +81,12 @@ void cursor_left_until(buffer *buf, const char *until);
 void get_cursor_pos(int *row, int *col);
 // draw height lines of the text buffer, starting at the buffer's
 // scroll, vi-style.
-void print_buf(const buffer *buf, size_t height, int *curx, int *cury);
+void print_buf(buffer *buf, size_t height, int *curx, int *cury,
+               int highlightcol, const char *eof_lines,
+               const char *linenums);
+
+// move scroll and cursor by l lines
+void scroll_buf(buffer *buf, int l);
 
 // marks the buffer as 'clean'
 void buf_fwrite(buffer *buf, FILE *f);
@@ -252,13 +257,41 @@ void get_cursor_pos(int *row, int *col) {
 }
 
 // print the contents of a text buffer, vi-style
-void print_buf(const buffer *buf, size_t height, int *curx, int *cury) {
-  const char *ch = buf->start;
-  size_t line = 0;
+void print_buf(buffer *buf, size_t height, int *curx, int *cury,
+               int highlight_col, const char *eof_lines,
+               const char *linenums) {
+  #define pb_next_line()                                 \
+    while (col < highlight_col) {                        \
+      col++;                                             \
+      printf(" ");                                       \
+    }                                                    \
+    if (col == highlight_col) printf("\033[90m|\033[0m"); \
+    col = 0;                                             \
+    line++;                                              \
+    if (line >= height) break;                           \
+    printf("\n");                                        \
+    if (linenums)                                        \
+      printf(linenums, scroll + line + 1);
 
-  printf(YELLOW "%" LINE_NUM_WIDTH "d " RESET, line + 1);
+  int scroll = buf->scroll;
+
+  const char *ch = buf->start;
+  int above_scroll = scroll;
+  int line = 0;
+  int col = 0;
+
+  printf(linenums, scroll + line + 1);
 
   while (ch < buf->end) {
+    if (above_scroll) {
+        if (ch == buf->gap) ch = buf->after+1;
+        if (*ch == '\n') {
+            above_scroll--;
+        }
+        ch++;
+        continue;
+    }
+
     if (ch == buf->gap) {
       get_cursor_pos(cury, curx);
 
@@ -268,13 +301,10 @@ void print_buf(const buffer *buf, size_t height, int *curx, int *cury) {
         break;
 
       if (*cursor == '\n') {
-        line++;
-        if (line >= height)
-          break;
-
-        printf(YELLOW "\n%" LINE_NUM_WIDTH "d " RESET, line + 1);
+        pb_next_line();
       } else {
         putchar(*cursor);
+        col++;
       }
 
       ch = cursor + 1;
@@ -282,21 +312,36 @@ void print_buf(const buffer *buf, size_t height, int *curx, int *cury) {
     }
 
     if (*ch == '\n') {
-      line++;
-      if (line >= height)
-        break;
-      printf(YELLOW "\n%" LINE_NUM_WIDTH "d " RESET, line + 1);
+        pb_next_line();
     } else {
+      if (col == highlight_col) printf("\033[90m\033[7m");
       putchar(*ch);
+      if (col == highlight_col) printf("\033[0m");
+      col++;
     }
 
     ch++;
   }
 
   while (line < height - 1) {
-    printf("\n" BLUE "~" RESET);
+    printf("%s", eof_lines);
     line++;
   }
+}
+
+void scroll_buf(buffer *buf, int l) {
+    while (l != 0) {
+        if (l > 0) {
+            cursor_right_until(buf, "\n");
+            buf->scroll += 1;
+            l--;
+        } else if (l < 0) {
+            if (buf->scroll == 0) break;
+            cursor_left_until(buf, "\n");
+            buf->scroll -= 1;
+            l++;
+        }
+    }
 }
 
 void buf_insertf(buffer *buf, FILE *f) {

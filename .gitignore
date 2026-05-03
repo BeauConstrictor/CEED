@@ -1,5 +1,4 @@
 *.swp
-ceed
-releases
-releases/*
+build/
+releases/
 changelog.md
