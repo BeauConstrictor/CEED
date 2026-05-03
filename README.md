@@ -36,22 +36,6 @@ $ make
 This will create the `./ceed` binary, which you can move to a
 directory in your PATH.
 
-## Manual Page
-
-For more in-depth information on how to use CEED, a manual page,
-`ceed.1` is provided which you can read like this:
-
-```sh
-$ man ./ceed.1
-```
-
-If you wish, you can also install this file systemwide, although
-this requires admin permissions:
-
-```sh
-$ sudo cp ./ceed.1 /usr/share/man/man1/
-```
-
 ## Installing
 
 To install CEED locally, either download the Linux binary from the
