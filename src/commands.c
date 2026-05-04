@@ -24,15 +24,13 @@ void cmd_echo(editor *ceed, const char *arg) {
 
 void cmd_force_edit(editor *ceed, const char *arg) {
   FILE *f = fopen(arg, "r");
-  if (!f) {
-    char *err = strerror(errno);
-    snprintf(ceed->status, STATUS_LENGTH, RED "%s" RESET, err);
-    return;
-  }
 
-  fseek(f, 0, SEEK_END);
-  long size = ftell(f);
-  fseek(f, 0, SEEK_SET);
+  long size = 128;
+  if (f) {
+    fseek(f, 0, SEEK_END);
+    size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+  }
 
   free_buf(ceed->buf);
   ceed->buf = create_buf(size + 64);
