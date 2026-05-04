@@ -58,7 +58,7 @@ size_t buf_size(const buffer *buf);
 void cursor_left(buffer *buf);
 void n_cursor_left(buffer *buf, unsigned int n);
 void cursor_right(buffer *buf);
-void N_cursor_right(buffer *buf, unsigned int n);
+void n_cursor_right(buffer *buf, unsigned int n);
 
 // use these to move the cursor up/down, by word, etc.
 // they move until a any character in the string until is found
