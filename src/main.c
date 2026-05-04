@@ -29,6 +29,7 @@
 #include <termios.h>
 #include <stdbool.h>
 #include <string.h>
+#include <signal.h>
 #include <unistd.h>
 #include <stdio.h>
 
@@ -42,6 +43,7 @@ static const char *HELP_MSG =
     "If FILE is not found, it will be created on save.\n";
 
 struct termios oldt, newt;
+bool say_exit_with_q = false;
 
 void draw_editor(editor *ceed) {
   struct winsize w;
@@ -54,10 +56,15 @@ void draw_editor(editor *ceed) {
   print_buf(ceed->buf, w.ws_row - 1, &curx, &cury, 70,
       "\n" BLUE "~" RESET, YELLOW "%5d " RESET);
 
+  if (say_exit_with_q) {
+    say_exit_with_q = false;
+    if (ceed->mode == normal)
+      sprintf(ceed->status, "Exit with ':q'");
+  }
   printf("\n%s", ceed->status);
+
   if (ceed->mode != command) 
     printf("\033[%d;%dH", cury, curx);
-
   printf("\033[%d q", ceed->cursor_shape);
 
   fflush(stdout);
@@ -85,7 +92,7 @@ void chmode(editor *ceed, editor_mode mode) {
   }
 }
 
-char *resolve_binding(binding *bind, char key, editor *ceed) {
+char *resolve_binding(binding *bind, char key) {
   char *cmd = NULL;
 
   while (bind) {
@@ -165,7 +172,7 @@ void handle_normal_mode_key(editor *ceed, char key) {
 
   case 'a':
     cursor_right(ceed->buf);
-    [[fallthrough]];
+    /* fall through */
   case 'i':
     chmode(ceed, insert);
     break;
@@ -175,7 +182,7 @@ void handle_normal_mode_key(editor *ceed, char key) {
     break;
 
   default:
-    char *cmd = resolve_binding(ceed->bindings, key, ceed);
+    char *cmd = resolve_binding(ceed->bindings, key);
     if (!cmd) break;
     sprintf(ceed->status, ":%s", cmd);
     run_command(ceed, cmd);
@@ -204,29 +211,31 @@ void handle_command_mode_key(editor *ceed, char key) {
   size_t cmd_len = strlen(ceed->status) - 1;
 
   switch (key) {
-  case '\n':
-    char cmd[STATUS_LENGTH];
-    strcpy(cmd, ceed->status + 1);
-    chmode(ceed, normal);
-    run_command(ceed, cmd);
-    break;
-
-  case '\b':
-  case '\177':
-    if (cmd_len < 1)
+    case '\n':
+      char cmd[STATUS_LENGTH];
+      strcpy(cmd, ceed->status + 1);
+      chmode(ceed, normal);
+      run_command(ceed, cmd);
       break;
-    ceed->status[cmd_len] = '\0';
-    break;
 
-  case '\033':
-    chmode(ceed, normal);
-    break;
-
-  default:
-    if (strlen(ceed->status) >= STATUS_LENGTH)
+    case '\b':
+    case '\177': {
+      if (cmd_len < 1)
+        break;
+      ceed->status[cmd_len] = '\0';
       break;
-    ceed->status[cmd_len + 1] = key;
-    ceed->status[cmd_len + 2] = '\0';
+    }
+
+    case '\033':
+      chmode(ceed, normal);
+      break;
+
+    default: {
+      if (strlen(ceed->status) >= STATUS_LENGTH)
+        break;
+      ceed->status[cmd_len + 1] = key;
+      ceed->status[cmd_len + 2] = '\0';
+    }
   }
 }
 
@@ -246,6 +255,9 @@ void handle_key(editor *ceed, char key) {
   }
 }
 
+void set_exit_with_q(int) {
+  say_exit_with_q = true;
+}
 void initialise_terminal() {
   tcgetattr(STDIN_FILENO, &oldt);
   newt = oldt;
@@ -256,7 +268,7 @@ void initialise_terminal() {
   printf("\033[2 q");
   printf("\033[?25h");
 
-  setvbuf(stdout, malloc(8192), _IOFBF, 8192);
+  signal(SIGINT, set_exit_with_q);
 }
 
 void cleanup_terminal() {

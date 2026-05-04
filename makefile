@@ -4,7 +4,7 @@ build/:
 	mkdir -p build
 
 ceed: src/* build/
-	gcc src/*.c -o build/ceed
+	gcc -Wall -Wextra src/*.c -o build/ceed
 
 .PHONY: all run
 

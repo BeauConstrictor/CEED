@@ -71,7 +71,9 @@ size_t buf_len(const buffer *buf);
 size_t buf_size(const buffer *buf);
 
 void cursor_left(buffer *buf);
+void n_cursor_left(buffer *buf, unsigned int n);
 void cursor_right(buffer *buf);
+void N_cursor_right(buffer *buf, unsigned int n);
 
 // use these to move the cursor up/down, by word, etc.
 // they move until a any character in the string until is found
@@ -134,7 +136,12 @@ buffer *expand_buf(buffer *buf, size_t new_size) {
   new_buf->gap = new_buf->start + cu_idx;
   new_buf->after = new_buf->end - bc_idx;
 
-  free_buf(buf);
+  new_buf->scroll = buf->scroll;
+  new_buf->path = buf->path;
+  new_buf->dirty = buf->dirty;
+
+  free(buf->start);
+  free(buf);
 
   return new_buf;
 }
@@ -192,6 +199,20 @@ void cursor_right(buffer *buf) {
   buf->after++;
   *buf->gap = ch;
   buf->gap++;
+}
+
+void n_cursor_left(buffer *buf, unsigned int n) {
+    while (n) {
+        cursor_left(buf);
+        n--;
+    }
+}
+
+void n_cursor_right(buffer *buf, unsigned int n) {
+    while (n) {
+        cursor_right(buf);
+        n--;
+    }
 }
 
 char char_under_cursor(const buffer *buf) {

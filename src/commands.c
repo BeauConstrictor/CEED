@@ -40,7 +40,7 @@ void cmd_force_edit(editor *ceed, const char *arg) {
     buf_insertf(ceed->buf, f);
     fclose(f);
     size_t len = buf_len(ceed->buf);
-    sprintf(ceed->status, "'%s', %d bytes", arg, len);
+    sprintf(ceed->status, "'%s', %zu bytes", arg, len);
     while (len) {
       cursor_left(ceed->buf);
       len--;
@@ -70,23 +70,14 @@ void cmd_bind(editor *ceed, const char *arg) {
     }
 
     binding *bind = malloc(sizeof(binding));
-    bind->next = NULL;
     bind->key = *arg;
-    strcpy(bind->cmd, arg+2);
+    bind->next = NULL;
+    snprintf(bind->cmd, STATUS_LENGTH, "%s", arg+2);
     
-    if (ceed->bindings == NULL) {
-        ceed->bindings = bind;
-        return;
-    }
-
-    binding *last_bind = ceed->bindings;
-    while (1) {
-        if (last_bind->next)
-            last_bind = last_bind->next;
-        else
-            break;
-    }
-    last_bind->next = bind;
+    // this allows you to overwrite old bindings, as the loop
+    // will see newer bindings first
+    if (ceed->bindings) bind->next = ceed->bindings;
+    ceed->bindings = bind;
 }
 
 void cmd_check(editor *ceed, const char *arg) {
@@ -102,7 +93,7 @@ void cmd_check(editor *ceed, const char *arg) {
 
   size_t status_len = strlen(ceed->status);
   size_t bytes = buf_len(ceed->buf);
-  sprintf(ceed->status + status_len, ", %d bytes", bytes);
+  sprintf(ceed->status + status_len, ", %zu bytes", bytes);
 }
 
 void cmd_write(editor *ceed, const char *arg) {
@@ -128,7 +119,7 @@ void cmd_write(editor *ceed, const char *arg) {
   buf_fwrite(ceed->buf, f);
   fclose(f);
   size_t len = buf_len(ceed->buf);
-  sprintf(ceed->status, "'%s', %d bytes written", path, len);
+  sprintf(ceed->status, "'%s', %zu bytes written", path, len);
 }
 
 void cmd_discard(editor *ceed, const char *arg) { ceed->buf->dirty = false; }
