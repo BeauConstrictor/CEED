@@ -28,10 +28,14 @@
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 #include <signal.h>
 #include <unistd.h>
 #include <stdio.h>
+
+#define word_BREAK "\n\t !\"#$%&'()*+,-./:;<=>?@[\\]^`{|}~"
+#define WORD_BREAK "\n\t "
 
 static const char *HELP_MSG =
     "Usage: ceed [FILE]\n"
@@ -49,12 +53,11 @@ void draw_editor(editor *ceed) {
   struct winsize w;
   ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
 
-  printf("\033[H\033[2J");
+  printf("\033[H\033[2J\033[?25l");
 
-  int curx;
-  int cury;
-  print_buf(ceed->buf, w.ws_row - 1, &curx, &cury, 70,
-      "\n" BLUE "~" RESET, YELLOW "%5d " RESET);
+  print_buf(ceed->buf, w.ws_row - 1, 70,
+      "\n" BLUE "~" RESET, YELLOW "%5d " RESET,
+      true);
 
   if (say_exit_with_q) {
     say_exit_with_q = false;
@@ -63,8 +66,9 @@ void draw_editor(editor *ceed) {
   }
   printf("\n%s", ceed->status);
 
+  printf("\033[?25h");
   if (ceed->mode != command) 
-    printf("\033[%d;%dH", cury, curx);
+    printf("\0338");
   printf("\033[%d q", ceed->cursor_shape);
 
   fflush(stdout);
@@ -119,18 +123,24 @@ void handle_normal_mode_key(editor *ceed, char key) {
     cursor_right(ceed->buf);
     break;
 
-  case 'k':
+  case 'j':
     cursor_right_until(ceed->buf, "\n");
     break;
-  case 'j':
+  case 'k':
     cursor_left_until(ceed->buf, "\n");
     break;
 
   case 'w':
-    cursor_right_until(ceed->buf, "\n ");
+    cursor_right_until(ceed->buf, word_BREAK);
     break;
   case 'b':
-    cursor_left_until(ceed->buf, "\n ");
+    cursor_left_until(ceed->buf, word_BREAK);
+    break;
+  case 'W':
+    cursor_right_until(ceed->buf, WORD_BREAK);
+    break;
+  case 'B':
+    cursor_left_until(ceed->buf, WORD_BREAK);
     break;
 
   case 'x':
@@ -284,7 +294,7 @@ int main(int argc, char *argv[]) {
   ceed.bindings = NULL;
   snprintf(ceed.status, sizeof(ceed.status), GREETING);
 
-  ceed.buf = create_buf(INITIAL_BUFFER_SIZE);
+  ceed.buf = create_buf(INITIAL_BUFFER_SIZE, PATH_LENGTH);
 
   if (argc > 2) {
     fprintf(stderr, "ceed: too many arguments\n");

@@ -33,7 +33,7 @@ void cmd_force_edit(editor *ceed, const char *arg) {
   }
 
   free_buf(ceed->buf);
-  ceed->buf = create_buf(size + 64);
+  ceed->buf = create_buf(size + 64, PATH_LENGTH);
   sprintf(ceed->buf->path, "%s", arg);
 
   if (f != NULL) {
@@ -104,7 +104,7 @@ void cmd_write(editor *ceed, const char *arg) {
     return;
   } else if (*arg != '\0') {
     path = arg;
-    snprintf(ceed->buf->path, MAX_BUF_PATH_LENGTH, "%s", path);
+    snprintf(ceed->buf->path, PATH_LENGTH, "%s", path);
   } else {
     path = ceed->buf->path;
   }
@@ -151,7 +151,7 @@ void run_command(editor *ceed, char *cmd) {
     return;
 
   char *arg = cmd;
-  while (*arg != '\0') {
+  while (*arg) {
     if (*arg == ' ') {
       *arg = '\0';
       arg++;

@@ -16,10 +16,10 @@ The codebase has no dependencies besides libc, and is straightforward
 enough to serve as a learning experience in building larger scale
 command-line programs in C.
 
-The core of CEED, `hole.h` is an independent header-only library
-that you can easily use to create your own text editor, and possibly
-take in a completely different direction - `hole.h` is not at all
-opinionated.
+The core of CEED, `hole.h` is a tiny, dependency-free library
+that you can easily use to build your own text editor, and possibly
+take in a completely different direction - `hole.h` itself is not at
+all opinionated, and the structs are transparent.
 
 ## Building
 

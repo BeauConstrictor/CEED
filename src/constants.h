@@ -12,5 +12,6 @@
 #define RESET "\033[0m"
 
 #define INITIAL_BUFFER_SIZE 8192
+#define PATH_LENGTH 80
 
 #endif // CONSTANTS_H
