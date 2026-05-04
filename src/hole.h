@@ -23,6 +23,7 @@
 #define RESET "\033[0m"
 
 #include <stdbool.h>
+#include <termios.h>
 #include <assert.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -81,7 +82,7 @@ void cursor_left_until(buffer *buf, const char *until);
 void get_cursor_pos(int *row, int *col);
 // draw height lines of the text buffer, starting at the buffer's
 // scroll, vi-style.
-void print_buf(buffer *buf, size_t height, int *curx, int *cury,
+void print_buf(buffer *buf, int height, int *curx, int *cury,
                int highlightcol, const char *eof_lines,
                const char *linenums);
 
@@ -240,6 +241,13 @@ void cursor_right_until(buffer *buf, const char *until) {
 }
 
 void get_cursor_pos(int *row, int *col) {
+    struct termios orig, raw;
+    tcgetattr(STDIN_FILENO, &orig);
+    raw = orig;
+
+    raw.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+
     char buf[32];
     int i = 0;
 
@@ -254,10 +262,12 @@ void get_cursor_pos(int *row, int *col) {
     buf[i] = '\0';
 
     sscanf(buf, "\033[%d;%dR", row, col);
+
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig);
 }
 
 // print the contents of a text buffer, vi-style
-void print_buf(buffer *buf, size_t height, int *curx, int *cury,
+void print_buf(buffer *buf, int height, int *curx, int *cury,
                int highlight_col, const char *eof_lines,
                const char *linenums) {
   #define draw_highlight_col()                            \
@@ -271,7 +281,7 @@ void print_buf(buffer *buf, size_t height, int *curx, int *cury,
     draw_highlight_col()                                  \
     col = 0;                                              \
     line++;                                               \
-    if (line >= height) break;                            \
+    if (line >= height && height > 0) break;              \
     printf("\n");                                         \
     if (linenums)                                         \
       printf(linenums, scroll + line + 1);
@@ -296,21 +306,8 @@ void print_buf(buffer *buf, size_t height, int *curx, int *cury,
     }
 
     if (ch == buf->gap) {
-      get_cursor_pos(cury, curx);
-
-      const char *cursor = buf->after;
-
-      if (cursor == buf->end)
-        break;
-
-      if (*cursor == '\n') {
-        pb_next_line();
-      } else {
-        putchar(*cursor);
-        col++;
-      }
-
-      ch = cursor + 1;
+      if (curx && cury) get_cursor_pos(cury, curx);
+      ch = buf->after;
       continue;
     }
 
@@ -328,7 +325,7 @@ void print_buf(buffer *buf, size_t height, int *curx, int *cury,
 
   draw_highlight_col();
 
-  while (line < height - 1) {
+  while (line < height - 1 && height > 0) {
     printf("%s", eof_lines);
     line++;
   }
