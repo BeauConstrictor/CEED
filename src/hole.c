@@ -1,11 +1,11 @@
-#include <stdbool.h>
-#include <termios.h>
 #include <assert.h>
+#include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <termios.h>
 #include <unistd.h>
-#include <stdio.h>
 
 #include "hole.h"
 
@@ -22,6 +22,7 @@ buffer *create_buf(size_t size, size_t pathlen) {
 
   buf->scroll = 0;
 
+  buf->pathsize = pathlen;
   buf->path = malloc(pathlen);
   assert(buf->path != NULL);
   *buf->path = '\0';
@@ -112,17 +113,17 @@ void cursor_right(buffer *buf) {
 }
 
 void n_cursor_left(buffer *buf, unsigned int n) {
-    while (n) {
-        cursor_left(buf);
-        n--;
-    }
+  while (n) {
+    cursor_left(buf);
+    n--;
+  }
 }
 
 void n_cursor_right(buffer *buf, unsigned int n) {
-    while (n) {
-        cursor_right(buf);
-        n--;
-    }
+  while (n) {
+    cursor_right(buf);
+    n--;
+  }
 }
 
 char char_under_cursor(const buffer *buf) {
@@ -174,22 +175,31 @@ void cursor_right_until(buffer *buf, const char *until) {
 // print the contents of a text buffer, vi-style
 void print_buf(buffer *buf, int height, int highlight_col,
                const char *eof_lines, const char *linenums,
-               bool save_cursor) {
-  #define draw_highlight_col()                            \
-    while (col < highlight_col) {                         \
-      col++;                                              \
-      printf(" ");                                        \
-    }                                                     \
-    if (col == highlight_col) printf("\033[90m|\033[0m");
+               bool save_cursor, const char *tab) {
+#define draw_highlight_col()                                                   \
+  while (col < highlight_col) {                                                \
+    col++;                                                                     \
+    printf(" ");                                                               \
+  }                                                                            \
+  if (col == highlight_col)                                                    \
+    printf("\033[100m \033[0m");
 
-  #define pb_next_line()                                  \
-    draw_highlight_col()                                  \
-    col = 0;                                              \
-    line++;                                               \
-    if (line >= height && height > 0) break;              \
-    printf("\n");                                         \
-    if (linenums)                                         \
-      printf(linenums, scroll + line + 1);
+#define pb_next_line()                                                         \
+  draw_highlight_col() col = 0;                                                \
+  line++;                                                                      \
+  if (line >= height && height > 0)                                            \
+    break;                                                                     \
+  printf("\n");                                                                \
+  if (linenums)                                                                \
+    printf(linenums, scroll + line + 1);
+
+#define print_ch(ch)                                                           \
+  if (col == highlight_col)                                                    \
+    printf("\033[90m\033[7m");                                                 \
+  putchar(ch);                                                                 \
+  if (col == highlight_col)                                                    \
+    printf("\033[0m");                                                         \
+  col++;
 
   int scroll = buf->scroll;
 
@@ -198,32 +208,38 @@ void print_buf(buffer *buf, int height, int highlight_col,
   int line = 0;
   int col = 0;
 
+  if (tab == NULL)
+    tab = "    ";
+
   printf(linenums, scroll + line + 1);
 
   while (ch < buf->end) {
     if (above_scroll) {
-        if (ch == buf->gap) ch = buf->after+1;
-        if (*ch == '\n') {
-            above_scroll--;
-        }
-        ch++;
-        continue;
+      if (ch == buf->gap)
+        ch = buf->after + 1;
+      if (*ch == '\n') {
+        above_scroll--;
+      }
+      ch++;
+      continue;
     }
 
     if (ch == buf->gap) {
-      // if (curx && cury) get_cursor_pos(cury, curx);
-      if (save_cursor) printf("\0337");
+      if (save_cursor)
+        printf("\0337");
       ch = buf->after;
       continue;
     }
 
     if (*ch == '\n') {
-        pb_next_line();
+      pb_next_line();
+    } else if (*ch == '\t') {
+      int tablen = strlen(tab);
+      for (int i = 0; i < tablen; i++) {
+        print_ch(tab[i]);
+      }
     } else {
-      if (col == highlight_col) printf("\033[90m\033[7m");
-      putchar(*ch);
-      if (col == highlight_col) printf("\033[0m");
-      col++;
+      print_ch(*ch);
     }
 
     ch++;
@@ -238,18 +254,19 @@ void print_buf(buffer *buf, int height, int highlight_col,
 }
 
 void scroll_buf(buffer *buf, int l) {
-    while (l != 0) {
-        if (l > 0) {
-            cursor_right_until(buf, "\n");
-            buf->scroll += 1;
-            l--;
-        } else if (l < 0) {
-            if (buf->scroll == 0) break;
-            cursor_left_until(buf, "\n");
-            buf->scroll -= 1;
-            l++;
-        }
+  while (l != 0) {
+    if (l > 0) {
+      cursor_right_until(buf, "\n");
+      buf->scroll += 1;
+      l--;
+    } else if (l < 0) {
+      if (buf->scroll == 0)
+        break;
+      cursor_left_until(buf, "\n");
+      buf->scroll -= 1;
+      l++;
     }
+  }
 }
 
 void buf_insertf(buffer *buf, FILE *f) {
@@ -283,5 +300,3 @@ void buf_fwrite(buffer *buf, FILE *f) {
 
   buf->dirty = false;
 }
-
-

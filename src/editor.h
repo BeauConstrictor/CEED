@@ -19,6 +19,7 @@ typedef struct {
   char status[STATUS_LENGTH];
   int cursor_shape;
   binding *bindings;
+  int exit;
 } editor;
 
 #endif

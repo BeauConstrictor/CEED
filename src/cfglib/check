@@ -1,0 +1,5 @@
+#!/bin/sh
+
+. "$(command -v ceed.sh)"
+
+[ "$(getv "$@")" = "no" ] && exit 1 || exit 0

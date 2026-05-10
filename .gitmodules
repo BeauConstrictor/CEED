@@ -1,0 +1,3 @@
+[submodule "lib/csrpc"]
+	path = lib/csrpc
+	url = https://github.com/beauconstrictor/csrpc.git

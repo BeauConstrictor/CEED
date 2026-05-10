@@ -1,5 +1,6 @@
 #include "constants.h"
 #include "hole.h"
+#include "csrpc.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -8,164 +9,185 @@
 
 #include "commands.h"
 
-void cmd_force_quit(editor *ceed, const char *arg) { exit(0); }
+#define RPC_FUNC(name) static struct csrpc_resp rpc_##name(editor *ceed, \
+    unsigned int argc, char **args)
 
-void cmd_quit(editor *ceed, const char *arg) {
-  if (ceed->buf->dirty) {
-    sprintf(ceed->status, RED "No write since last change" RESET);
+#define ENSURE_ENOUGH_ARGS(count)                             \
+  if (argc < count) {                                         \
+      return (struct csrpc_resp){"missing argument(s)\n", 1}; \
+  }
+
+#define SUCCESS() return (struct csrpc_resp){"", 0}
+
+#define ADD_FUNC(name) { #name, rpc_##name }
+
+RPC_FUNC(quit) {
+  long code = argc == 1 ? 0 : strtol(args[1], NULL, 10);
+  ceed->exit = code;
+  SUCCESS();
+}
+
+RPC_FUNC(setv) {
+  ENSURE_ENOUGH_ARGS(3);
+
+  if (strcmp(args[1], "path") == 0) {
+    snprintf(ceed->buf->path, ceed->buf->pathsize, "%s", args[2]);
+  } else if (strcmp(args[1], "dirty") == 0) {
+    if (strcmp(args[2], "yes") == 0)
+      ceed->buf->dirty = true;
+    else if (strcmp(args[2], "no") == 0)
+      ceed->buf->dirty = false;
+    else
+      return (struct csrpc_resp){"value cannot be interpreted as a flag", 1};
   } else {
-    cmd_force_quit(ceed, arg);
-  }
-}
-
-void cmd_echo(editor *ceed, const char *arg) {
-  sprintf(ceed->status, "%s", arg);
-}
-
-void cmd_force_edit(editor *ceed, const char *arg) {
-  FILE *f = fopen(arg, "r");
-
-  long size = 128;
-  if (f) {
-    fseek(f, 0, SEEK_END);
-    size = ftell(f);
-    fseek(f, 0, SEEK_SET);
+    char errmsg[128];
+    snprintf(errmsg, sizeof(errmsg), "unknown var: '%s'\n", args[1]);
+    return (struct csrpc_resp){errmsg, 1};
   }
 
+  SUCCESS();
+}
+
+RPC_FUNC(getv) {
+  ENSURE_ENOUGH_ARGS(2);
+
+  if        (strcmp(args[1], "bytes") == 0) {
+    static char slen[16];
+    snprintf(slen, sizeof(slen), "%zu\n", buf_len(ceed->buf));
+    return (struct csrpc_resp){slen, 0};
+  } else if (strcmp(args[1], "path") == 0) {
+    return (struct csrpc_resp){ceed->buf->path, 0};
+  } else if (strcmp(args[1], "dirty") == 0) {
+    return (struct csrpc_resp){ceed->buf->dirty ? "yes": "no", 0};
+  } else {
+    char errmsg[128];
+    snprintf(errmsg, sizeof(errmsg), "unknown var: '%s'\n", args[1]);
+    return (struct csrpc_resp){errmsg, 1};
+ }
+
+  SUCCESS();
+}
+
+RPC_FUNC(enew) {
   free_buf(ceed->buf);
-  ceed->buf = create_buf(size + 64, PATH_LENGTH);
-  sprintf(ceed->buf->path, "%s", arg);
-
-  if (f != NULL) {
-    buf_insertf(ceed->buf, f);
-    fclose(f);
-    size_t len = buf_len(ceed->buf);
-    sprintf(ceed->status, "'%s', %zu bytes", arg, len);
-    while (len) {
-      cursor_left(ceed->buf);
-      len--;
-    }
-    cursor_right_until(ceed->buf, "\n");
-    cursor_right_until(ceed->buf, "\n");
-  } else if (*arg == '\0') {
-    sprintf(ceed->status, "unnamed buffer, [new]");
-  } else {
-    sprintf(ceed->status, "'%s', [new]", arg);
-  }
-
-  ceed->buf->dirty = false;
+  ceed->buf = create_buf(INITIAL_BUFFER_SIZE, PATH_LENGTH);
+  SUCCESS();
 }
 
-void cmd_edit(editor *ceed, const char *arg) {
-  if (ceed->buf->dirty)
-    sprintf(ceed->status, RED "No write since last change" RESET);
-  else
-    cmd_force_edit(ceed, arg);
+RPC_FUNC(insert) {
+  ENSURE_ENOUGH_ARGS(2);
+  buf_inserts(ceed->buf, args[1]);
+  SUCCESS();
 }
 
-void cmd_bind(editor *ceed, const char *arg) {
-    if (strlen(arg) < 3 || *(arg+1) != ' ') {
-        sprintf(ceed->status, RED "Bad argument" RESET);
-        return;
-    }
-
-    binding *bind = malloc(sizeof(binding));
-    bind->key = *arg;
-    bind->next = NULL;
-    snprintf(bind->cmd, STATUS_LENGTH, "%s", arg+2);
-    
-    // this allows you to overwrite old bindings, as the loop
-    // will see newer bindings first
-    if (ceed->bindings) bind->next = ceed->bindings;
-    ceed->bindings = bind;
+RPC_FUNC(finsert) {
+  ENSURE_ENOUGH_ARGS(2);
+  FILE *f = fopen(args[1], "r");
+  if (!f)
+    return (struct csrpc_resp){strerror(errno), 1};
+  buf_insertf(ceed->buf, f);
+  fclose(f);
+  SUCCESS();
 }
 
-void cmd_check(editor *ceed, const char *arg) {
-  char *path = ceed->buf->path;
-  if (*path == '\0') {
-    sprintf(ceed->status, "unnamed buffer");
-  } else {
-    sprintf(ceed->status, "'%s'", ceed->buf->path);
-  }
-
-  if (ceed->buf->dirty)
-    strcat(ceed->status, " [modified]");
-
-  size_t status_len = strlen(ceed->status);
-  size_t bytes = buf_len(ceed->buf);
-  sprintf(ceed->status + status_len, ", %zu bytes", bytes);
-}
-
-void cmd_write(editor *ceed, const char *arg) {
-  const char *path;
-
-  if (*arg == '\0' && *ceed->buf->path == '\0') {
-    sprintf(ceed->status, RED "No file name" RESET);
-    return;
-  } else if (*arg != '\0') {
-    path = arg;
-    snprintf(ceed->buf->path, PATH_LENGTH, "%s", path);
-  } else {
-    path = ceed->buf->path;
-  }
+RPC_FUNC(write) {
+  char path[PATH_LENGTH];
+  snprintf(path, sizeof(path), "%s",
+      argc == 1 ? ceed->buf->path : args[2]);
 
   FILE *f = fopen(path, "w");
-  if (!f) {
-    char *err = strerror(errno);
-    snprintf(ceed->status, STATUS_LENGTH, RED "%s" RESET, err);
-    return;
-  }
-
   buf_fwrite(ceed->buf, f);
   fclose(f);
-  size_t len = buf_len(ceed->buf);
-  sprintf(ceed->status, "'%s', %zu bytes written", path, len);
 }
 
-void cmd_discard(editor *ceed, const char *arg) { ceed->buf->dirty = false; }
-
-void cmd_writequit(editor *ceed, const char *arg) {
-  cmd_write(ceed, arg);
-  cmd_quit(ceed, arg); // ignores the argument, so this is fine
+RPC_FUNC(lcur) {
+  cursor_left(ceed->buf);
+  SUCCESS();
 }
 
-void cmd_version(editor *ceed, const char *arg) {
-  sprintf(ceed->status, GREETING);
+RPC_FUNC(rcur) {
+  cursor_right(ceed->buf);
+  SUCCESS();
 }
 
-static ex_command commands[] = {
-    { "q",       cmd_quit },  { "q!",   cmd_force_quit },
-    { "w",       cmd_write }, { "wq",   cmd_writequit },
-    { "e",       cmd_edit },  { "e!",   cmd_force_edit },
-    { "echo",    cmd_echo },
-    { "bind",    cmd_bind },
-    { "check",   cmd_check },
-    { "discard", cmd_discard }, 
-    { "version", cmd_version },
+RPC_FUNC(lcur_u) {
+  ENSURE_ENOUGH_ARGS(2);
+  cursor_left_until(ceed->buf, args[1]);
+  SUCCESS();
+}
+
+RPC_FUNC(rcur_u) {
+  ENSURE_ENOUGH_ARGS(2);
+  cursor_right_until(ceed->buf, args[1]);
+  SUCCESS();
+}
+
+RPC_FUNC(bind) {
+  ENSURE_ENOUGH_ARGS(3);
+
+  if (strlen(args[1]) > 1)
+    return (struct csrpc_resp){"invalid keymap literal", 1};
+
+  binding *bind = malloc(sizeof(binding));
+  bind->key = args[1][0];
+  bind->next = NULL;
+  snprintf(bind->cmd, STATUS_LENGTH, "%s", args[2]);
+
+  if (ceed->bindings) bind->next = ceed->bindings;
+  ceed->bindings = bind;
+
+  SUCCESS();
+}
+
+typedef struct csrpc_resp (*rpc_cmd_handler)(editor *ceed,
+  unsigned int argc, char **args);
+
+struct rpc_cmd {
+  char *name;
+  rpc_cmd_handler handler;
 };
 
-static const size_t cmd_count = sizeof(commands) / sizeof(commands[0]);
+static struct rpc_cmd cmds[] = {
+  ADD_FUNC(quit),
+  ADD_FUNC(setv), ADD_FUNC(getv),
+  ADD_FUNC(enew),
+  ADD_FUNC(insert), ADD_FUNC(finsert),
+  ADD_FUNC(lcur), ADD_FUNC(rcur),
+  ADD_FUNC(lcur_u), ADD_FUNC(rcur_u),
+  ADD_FUNC(write),
+  ADD_FUNC(bind),
+};
+
+static const size_t cmd_count = sizeof(cmds) / sizeof(struct rpc_cmd);
+
+static struct csrpc_resp handle_rpc_call(struct csrpc_call *call, void *ceed) {
+  ceed = (editor*)ceed;
+  unsigned int argc = call->argc;
+  char **args = call->args;
+  char *cmd = call->args[0];
+
+  for (unsigned int i = 0; i < cmd_count; i++) {
+    if (strcmp(cmd, cmds[i].name) == 0) {
+      return cmds[i].handler(ceed, argc, args);
+    }
+  }
+
+  return (struct csrpc_resp){"csrpc: command not found\n", 1};
+}
 
 void run_command(editor *ceed, char *cmd) {
-  if (strlen(cmd) == 0)
-    return;
+  ceed->status[0] = '\0';
 
-  char *arg = cmd;
-  while (*arg) {
-    if (*arg == ' ') {
-      *arg = '\0';
-      arg++;
-      break;
-    }
-    arg++;
+  FILE* f = csrpc_run(cmd, "build/cfglib/ceed.sh",
+      handle_rpc_call, ceed);
+
+  size_t n = fread(ceed->status, 1, STATUS_LENGTH-1, f);
+  ceed->status[n] = '\0';
+  fclose(f);
+
+  char *s = ceed->status;
+  while (*s) {
+    if (*s == '\n') *s = ' ';
+    s++;
   }
-
-  for (size_t i = 0; i < cmd_count; i++) {
-    if (strcmp(commands[i].name, cmd) == 0) {
-      commands[i].handler(ceed, arg);
-      return;
-    }
-  }
-
-  sprintf(ceed->status, RED "Not an editor command: %s" RESET, cmd);
 }

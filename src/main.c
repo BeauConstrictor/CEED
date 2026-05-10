@@ -37,6 +37,8 @@
 #define word_BREAK "\n\t !\"#$%&'()*+,-./:;<=>?@[\\]^`{|}~"
 #define WORD_BREAK "\n\t "
 
+const bool DEBUG_REPL = false;
+
 static const char *HELP_MSG =
     "Usage: ceed [FILE]\n"
     "\n"
@@ -56,8 +58,8 @@ void draw_editor(editor *ceed) {
   printf("\033[H\033[2J\033[?25l");
 
   print_buf(ceed->buf, w.ws_row - 1, 70,
-      "\n" BLUE "~" RESET, YELLOW "%5d " RESET,
-      true);
+      "\n" GREY "~" RESET, GREY "%5d " RESET,
+      true, "    ");
 
   if (say_exit_with_q) {
     say_exit_with_q = false;
@@ -78,13 +80,13 @@ void chmode(editor *ceed, editor_mode mode) {
   switch (mode) {
     case normal:
       ceed->mode = normal;
-      cmd_check(ceed, NULL);
+      run_command(ceed, "stat");
       ceed->cursor_shape = 0;
      break;
 
      case insert:
       ceed->mode = insert;
-      sprintf(ceed->status, "-- INSERT --");
+      sprintf(ceed->status, BOLD YELLOW "-- INSERT --" RESET);
       ceed->cursor_shape = 6;
       break;
 
@@ -288,14 +290,14 @@ void cleanup_terminal() {
   printf("\033[2 q");
 }
 
-int main(int argc, char *argv[]) {
-  editor ceed;
-  ceed.mode = normal;
-  ceed.bindings = NULL;
-  snprintf(ceed.status, sizeof(ceed.status), GREETING);
+void init_editor(editor *ceed) {
+  ceed->exit = -1;
+  ceed->buf = create_buf(INITIAL_BUFFER_SIZE, PATH_LENGTH);
+  snprintf(ceed->status, sizeof(ceed->status), GREETING);
+  chmode(ceed, normal);
+}
 
-  ceed.buf = create_buf(INITIAL_BUFFER_SIZE, PATH_LENGTH);
-
+void process_args(editor *ceed, int argc, char *argv[]) {
   if (argc > 2) {
     fprintf(stderr, "ceed: too many arguments\n");
     fprintf(stderr, "Try 'ceed --help' for more information.\n");
@@ -308,15 +310,50 @@ int main(int argc, char *argv[]) {
     printf("ceed (C Embedded EDitor) " CEED_VERSION "\n");
     exit(0);
   } else if (argc == 2) {
-    char command[STATUS_LENGTH];
-    snprintf(command, STATUS_LENGTH - 2, "e %s", argv[1]);
-    run_command(&ceed, command);
+    char cmd[STATUS_LENGTH];
+    snprintf(cmd, STATUS_LENGTH - 2, "edit \"%s\"", argv[1]);
+    // sprintf(cmd, "stat");
+    run_command(ceed, cmd);
   }
+}
+
+void add_lib_to_path() {
+  char new_path[4096];
+  char *orig_path = getenv("PATH");
+  snprintf(new_path, sizeof(new_path),
+      "%s:%s", "./build/cfglib", orig_path);
+  setenv("PATH", new_path, 1);
+}
+
+int debug_repl(editor *ceed) {
+  char cmd[1024];
+  printf("%s\n: ", ceed->status);
+  while (fgets(cmd, sizeof(cmd), stdin)) {
+    if (strcmp(cmd, "q\n") == 0) break;
+    run_command(ceed, cmd);
+    printf("%s\n: ", ceed->status);
+  }
+  return 0;
+}
+
+int main(int argc, char *argv[]) {
+  editor ceed = {0};
+  init_editor(&ceed);
+
+  process_args(&ceed, argc, argv);
+
+  add_lib_to_path();
+
+  if (DEBUG_REPL)
+    return debug_repl(&ceed);
 
   initialise_terminal();
   atexit(cleanup_terminal);
 
   while (true) {
+    if (ceed.exit >= 0)
+      exit(ceed.exit);
+
     draw_editor(&ceed);
 
     char key = getchar();

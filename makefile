@@ -1,12 +1,25 @@
-all: ceed
+CFGCMDS := $(wildcard src/cfglib/*)
+CFILES  := $(wildcard src/*.[ch])
+
+all: ceed build/cfglib
 
 build/:
-	mkdir -p build
+	mkdir -p build/
 
-ceed: src/* build/
-	gcc -Wall -Wextra src/*.c -o build/ceed
+csrpc:
+	$(MAKE) -C lib/csrpc/
+
+build/cfglib: $(CFGCMDS) csrpc
+	mkdir -p build/cfglib
+	cp src/cfglib/* build/cfglib
+	cp lib/csrpc/build/send-cmd build/cfglib
+	chmod +x build/cfglib/*
+
+ceed: $(CFILES) build/ csrpc
+	gcc -Wall -Wextra -Wno-unused-parameter src/*.c -o build/ceed -L./lib/csrpc/build/ \
+	  -lcsrpc -I./lib/csrpc/include
 
 .PHONY: all run
 
-run: ceed
+run: all
 	build/ceed src/main.c

@@ -26,6 +26,7 @@ typedef struct {
 
   int scroll; // lines from top
   char *path; // string path of the buffer
+  size_t pathsize;
   bool dirty;
 } buffer;
 
@@ -79,9 +80,11 @@ void cursor_left_until(buffer *buf, const char *until);
 // * if save_cursors is set, then you can printf("\0338"); to move
 //   the terminal cursor to the cursor's location in the text buffer
 //   after drawing
+// * tab is a string drawn in place of tab characters, leave as null
+//   for 4 spaces
 void print_buf(buffer *buf, int height, int highlightcol,
                const char *eof_lines, const char *linenums,
-               bool save_cursor);
+               bool save_cursor, const char *tab);
 
 // move scroll and cursor by l lines
 void scroll_buf(buffer *buf, int l);
