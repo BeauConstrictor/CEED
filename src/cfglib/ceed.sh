@@ -28,6 +28,10 @@ q() { quit; }
 e() { edit $@; }
 w() { write $@; }
 
+# char escapes
+lf='
+'
+
 # ansi escapes
 RESET="\033[0m"
 BOLD="\033[1m"

@@ -25,4 +25,4 @@ ceed: $(CFILES) build/ csrpc
 .PHONY: all run
 
 run: all
-	build/ceed --repl
+	build/ceed src/main.c

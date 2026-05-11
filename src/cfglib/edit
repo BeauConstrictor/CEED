@@ -9,7 +9,13 @@ fi
 
 enew
 
-if [ -e "$@" ]; then finsert "$@"; fi
+if [ -e "$@" ]; then
+    finsert "$@"
+    lcur_u ""
+    rcur_u "$lf"
+    rcur_u "$lf"
+fi
+
 setv path "$@"
 setv dirty no
 
