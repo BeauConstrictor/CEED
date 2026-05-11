@@ -4,6 +4,8 @@
 #define CEED_VERSION "v1.1.0"
 #define GREETING "CEED - C Embedded EDitor " CEED_VERSION
 
+#define CONFIG_PATH "$HOME/.ceedrc"
+
 #define STATUS_LENGTH 128
 
 #define BLUE "\033[34m"

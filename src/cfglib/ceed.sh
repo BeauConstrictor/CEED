@@ -8,6 +8,12 @@
 #   eval $IMPORT_CEED
 # at the top of your script.
 
+if [ -n "$CEED_IMPORTED" ]; then
+    exit
+else
+    CEED_IMPORTED="yes"
+fi
+
 export PATH="./build/cfglib/:$PATH"
 
 # base commands

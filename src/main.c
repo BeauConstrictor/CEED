@@ -22,7 +22,6 @@
 #include "editor.h"
 #include "hole.h"
 
-#include "implementations.h"
 #include "constants.h"
 
 #include <sys/ioctl.h>
@@ -68,7 +67,7 @@ void draw_editor(editor *ceed) {
 
   printf("\033[?25h");
   if (ceed->mode != command) 
-    printf("\0338");
+    printf("\033[u");
   printf("\033[%d q", ceed->cursor_shape);
 
   fflush(stdout);
@@ -144,8 +143,8 @@ void handle_normal_mode_key(editor *ceed, char key) {
     break;
 
   case 'x':
-    buf_backspace(ceed->buf);
     cursor_right(ceed->buf);
+    buf_backspace(ceed->buf);
     break;
 
   case 'o':
@@ -194,7 +193,7 @@ void handle_normal_mode_key(editor *ceed, char key) {
   default:
     char *cmd = resolve_binding(ceed->bindings, key);
     if (!cmd) break;
-    sprintf(ceed->status, ":%s", cmd);
+    snprintf(ceed->status, STATUS_LENGTH, ":%s", cmd);
     run_command(ceed, cmd);
     free(cmd);
     break;
@@ -268,6 +267,7 @@ void handle_key(editor *ceed, char key) {
 void set_exit_with_q(int) {
   say_exit_with_q = true;
 }
+
 void initialise_terminal() {
   tcgetattr(STDIN_FILENO, &oldt);
   newt = oldt;
@@ -291,7 +291,6 @@ void init_editor(editor *ceed) {
   ceed->exit = -1;
   ceed->buf = create_buf(INITIAL_BUFFER_SIZE, PATH_LENGTH);
   chmode(ceed, normal);
-  snprintf(ceed->status, sizeof(ceed->status), GREETING);
 }
 
 int repl(editor *ceed) {
@@ -321,9 +320,15 @@ void process_args(editor *ceed, int argc, char *argv[]) {
     exit(repl(ceed));
   } else if (argc == 2) {
     char cmd[STATUS_LENGTH];
-    snprintf(cmd, STATUS_LENGTH - 2, "edit \"%s\"", argv[1]);
+    snprintf(cmd, STATUS_LENGTH, "edit \"%s\"", argv[1]);
     run_command(ceed, cmd);
   }
+}
+
+void run_config_script(editor *ceed) {
+  char cmd[128];
+  snprintf(cmd, sizeof(cmd), ". \"%s\"", CONFIG_PATH);
+  run_command(ceed, cmd);
 }
 
 int main(int argc, char *argv[]) {
@@ -333,6 +338,10 @@ int main(int argc, char *argv[]) {
   init_editor(&ceed);
 
   process_args(&ceed, argc, argv);
+
+  run_config_script(&ceed);
+  if (strlen(ceed.status) == 0)
+    snprintf(ceed.status, sizeof(ceed.status), GREETING);
 
   initialise_terminal();
   atexit(cleanup_terminal);

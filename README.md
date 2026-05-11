@@ -38,18 +38,29 @@ directory in your PATH.
 
 ## Installing
 
-To install CEED locally, either download the Linux binary from the
-releases page, or build it yourself.
+To install CEED locally, just use `make install` and add this to
+your system's `~/.bashrc` equivalent:
 
-Then, move the binary into a directory in your PATH such as
-`/usr/local/bin` (or `~/.local/bin` for a single-user install, but
-you may have to add this to PATH manually). For Windows, you will
-probably want to put CEED somewhere with a short path and call it
-manually like this:
-
-```pwsh
-PS C:\Users\You\ .\Tools\ceed.exe
+```sh
+export CEED_INSTALL=~/.local/share/ceed/
 ```
+
+If you want to do it manually, either download the zip file from the
+Github releases page and unzip it or use `make`. Either way, this will
+give you a `build/` directory. Then:
+
+1. Rename `build/` to `ceed/` and move it into `~/.local/share`.
+2. Copy `~/.local/share/ceed/ceed` into `~/.local/bin/`.
+3. Add `export CEED_INSTALL=~/.local/share/ceed/` to your system's
+   `~/.bashrc` equivalent.
+4. Restart your shell.
+
+## Platform Support
+
+CEED currently only supports more-or-less POSIX systems such as Linux
+distributions and the BSDs. Windows support is impossible without a
+POSIX environment such as Cygwin, but you'll have to figure that out
+for yourself.
 
 ## License & Contributing
 

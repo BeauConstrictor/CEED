@@ -226,7 +226,7 @@ void print_buf(buffer *buf, int height, int highlight_col,
 
     if (ch == buf->gap) {
       if (save_cursor)
-        printf("\0337");
+        printf("\033[s");
       ch = buf->after;
       continue;
     }
@@ -264,7 +264,6 @@ void snprint_buf(char *str, size_t size, buffer *buf) {
     i++;
   }
   str[i] = '\0';
-  printf(str);
 }
 
 void scroll_buf(buffer *buf, int l) {

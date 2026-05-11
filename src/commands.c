@@ -22,6 +22,7 @@
 #define ADD_FUNC(name) { #name, rpc_##name }
 
 char *long_resp_buf = NULL;
+char *install_dir;
 
 RPC_FUNC(quit) {
   long code = argc == 1 ? 0 : strtol(args[1], NULL, 10);
@@ -98,7 +99,7 @@ RPC_FUNC(finsert) {
 RPC_FUNC(write) {
   char path[PATH_LENGTH];
   snprintf(path, sizeof(path), "%s",
-      argc == 1 ? ceed->buf->path : args[2]);
+      argc == 1 ? ceed->buf->path : args[1]);
   if (strlen(path) == 0)
     return (struct csrpc_resp){"no file name", 1};
 
@@ -196,8 +197,10 @@ static struct csrpc_resp handle_rpc_call(struct csrpc_call *call, void *ceed) {
 void run_command(editor *ceed, char *cmd) {
   ceed->status[0] = '\0';
 
-  FILE* f = csrpc_run(cmd, "build/cfglib/ceed.sh",
-      handle_rpc_call, ceed);
+  char ceedsh[1024];
+  snprintf(ceedsh, sizeof(ceedsh), "%s/cfglib/ceed.sh", install_dir);
+
+  FILE* f = csrpc_run(cmd, ceedsh, handle_rpc_call, ceed);
 
   free_long_resp();
 
@@ -213,10 +216,19 @@ void run_command(editor *ceed, char *cmd) {
 }
 
 void init_commands() {
+  install_dir = getenv("CEED_INSTALL");
+
+  if (!install_dir) {
+    fprintf(stderr, "ceed: CEED_INSTALL is not set\n"
+      "Make sure to add this to your system's '~/.bashrc' equivalent:\n"
+      "\texport CEED_INSTALL=~/.local/share/ceed/\n");
+    exit(1);
+  }
+
   char new_path[4096];
   char *orig_path = getenv("PATH");
   snprintf(new_path, sizeof(new_path),
-      "%s:%s", "./build/cfglib", orig_path);
+      "%s/cfglib:%s", install_dir, orig_path);
   setenv("PATH", new_path, 1);
 
   setenv("IMPORT_CEED", ". \"$(command -v ceed.sh)\"", 1);
