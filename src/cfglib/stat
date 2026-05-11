@@ -1,6 +1,6 @@
 #!/bin/sh
 
-. "$(command -v ceed.sh)"
+eval $IMPORT_CEED
 
 path=$(getv path)
 if [ -n "$path" ]; then
@@ -15,4 +15,12 @@ fi
 
 printf ", "
 
-getv bytes | numfmt --to=iec
+lslhfmt() {
+    if [ "$1" -lt 1024 ]; then
+        printf "${1}B"
+    else
+        echo "$1" | numfmt --to=iec
+    fi
+}
+
+lslhfmt $(getv bytes)

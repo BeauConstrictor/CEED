@@ -16,4 +16,7 @@ void cmd_check(editor *ceed, const char *arg);
 // modifies cmd, make sure you strncpy beforehand
 void run_command(editor *ceed, char *cmd);
 
+// set env variables and the like
+void init_commands();
+
 #endif // COMMANDS_H

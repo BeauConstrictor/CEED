@@ -253,6 +253,20 @@ void print_buf(buffer *buf, int height, int highlight_col,
   }
 }
 
+void snprint_buf(char *str, size_t size, buffer *buf) {
+  char *s = buf->start;
+  size_t i = 0;
+  while (i < size-1) {
+    if (s == buf->gap) s = buf->after;
+    if (s == buf->end) break;
+    str[i] = *s;
+    s++;
+    i++;
+  }
+  str[i] = '\0';
+  printf(str);
+}
+
 void scroll_buf(buffer *buf, int l) {
   while (l != 0) {
     if (l > 0) {

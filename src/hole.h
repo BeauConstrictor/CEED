@@ -86,6 +86,10 @@ void print_buf(buffer *buf, int height, int highlightcol,
                const char *eof_lines, const char *linenums,
                bool save_cursor, const char *tab);
 
+// copy (no more than size-1 chars of) buf's text into str, followed
+// by a NULL byte
+void snprint_buf(char *str, size_t size, buffer *buf);
+
 // move scroll and cursor by l lines
 void scroll_buf(buffer *buf, int l);
 

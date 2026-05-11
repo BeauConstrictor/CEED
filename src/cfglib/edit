@@ -1,9 +1,16 @@
 #!/bin/sh
 
-. "$(command -v ceed.sh)"
+eval $IMPORT_CEED
+
+if [ "$#" -lt 1 ]; then
+    printf "${RED}No file name${RESET}"
+    exit
+fi
 
 enew
-finsert "$@"
+
+if [ -e "$@" ]; then finsert "$@"; fi
 setv path "$@"
 setv dirty no
+
 stat

@@ -37,8 +37,6 @@
 #define word_BREAK "\n\t !\"#$%&'()*+,-./:;<=>?@[\\]^`{|}~"
 #define WORD_BREAK "\n\t "
 
-const bool DEBUG_REPL = false;
-
 static const char *HELP_MSG =
     "Usage: ceed [FILE]\n"
     "\n"
@@ -278,7 +276,6 @@ void initialise_terminal() {
 
   printf("\033[?1049h");
   printf("\033[2 q");
-  printf("\033[?25h");
 
   signal(SIGINT, set_exit_with_q);
 }
@@ -293,8 +290,19 @@ void cleanup_terminal() {
 void init_editor(editor *ceed) {
   ceed->exit = -1;
   ceed->buf = create_buf(INITIAL_BUFFER_SIZE, PATH_LENGTH);
-  snprintf(ceed->status, sizeof(ceed->status), GREETING);
   chmode(ceed, normal);
+  snprintf(ceed->status, sizeof(ceed->status), GREETING);
+}
+
+int repl(editor *ceed) {
+  char cmd[1024];
+  printf("%s\n: ", ceed->status);
+  while (fgets(cmd, sizeof(cmd), stdin)) {
+    if (strcmp(cmd, "q\n") == 0) break;
+    run_command(ceed, cmd);
+    printf("%s\n: ", ceed->status);
+  }
+  return 0;
 }
 
 void process_args(editor *ceed, int argc, char *argv[]) {
@@ -309,43 +317,22 @@ void process_args(editor *ceed, int argc, char *argv[]) {
   } else if (argc == 2 && strcmp(argv[1], "--version") == 0) {
     printf("ceed (C Embedded EDitor) " CEED_VERSION "\n");
     exit(0);
+  } else if (argc == 2 && strcmp(argv[1], "--repl") == 0) {
+    exit(repl(ceed));
   } else if (argc == 2) {
     char cmd[STATUS_LENGTH];
     snprintf(cmd, STATUS_LENGTH - 2, "edit \"%s\"", argv[1]);
-    // sprintf(cmd, "stat");
     run_command(ceed, cmd);
   }
-}
-
-void add_lib_to_path() {
-  char new_path[4096];
-  char *orig_path = getenv("PATH");
-  snprintf(new_path, sizeof(new_path),
-      "%s:%s", "./build/cfglib", orig_path);
-  setenv("PATH", new_path, 1);
-}
-
-int debug_repl(editor *ceed) {
-  char cmd[1024];
-  printf("%s\n: ", ceed->status);
-  while (fgets(cmd, sizeof(cmd), stdin)) {
-    if (strcmp(cmd, "q\n") == 0) break;
-    run_command(ceed, cmd);
-    printf("%s\n: ", ceed->status);
-  }
-  return 0;
 }
 
 int main(int argc, char *argv[]) {
+  init_commands();
+
   editor ceed = {0};
   init_editor(&ceed);
 
   process_args(&ceed, argc, argv);
-
-  add_lib_to_path();
-
-  if (DEBUG_REPL)
-    return debug_repl(&ceed);
 
   initialise_terminal();
   atexit(cleanup_terminal);

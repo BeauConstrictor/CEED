@@ -21,6 +21,8 @@
 
 #define ADD_FUNC(name) { #name, rpc_##name }
 
+char *long_resp_buf = NULL;
+
 RPC_FUNC(quit) {
   long code = argc == 1 ? 0 : strtol(args[1], NULL, 10);
   ceed->exit = code;
@@ -59,13 +61,16 @@ RPC_FUNC(getv) {
     return (struct csrpc_resp){ceed->buf->path, 0};
   } else if (strcmp(args[1], "dirty") == 0) {
     return (struct csrpc_resp){ceed->buf->dirty ? "yes": "no", 0};
+  } else if (strcmp(args[1], "buf") == 0) {
+    size_t size = buf_len(ceed->buf) + 1;
+    long_resp_buf = malloc(size);
+    snprint_buf(long_resp_buf, size, ceed->buf);
+    return (struct csrpc_resp){long_resp_buf, 0};
   } else {
     char errmsg[128];
     snprintf(errmsg, sizeof(errmsg), "unknown var: '%s'\n", args[1]);
     return (struct csrpc_resp){errmsg, 1};
  }
-
-  SUCCESS();
 }
 
 RPC_FUNC(enew) {
@@ -94,10 +99,14 @@ RPC_FUNC(write) {
   char path[PATH_LENGTH];
   snprintf(path, sizeof(path), "%s",
       argc == 1 ? ceed->buf->path : args[2]);
+  if (strlen(path) == 0)
+    return (struct csrpc_resp){"no file name", 1};
 
   FILE *f = fopen(path, "w");
   buf_fwrite(ceed->buf, f);
   fclose(f);
+
+  SUCCESS();
 }
 
 RPC_FUNC(lcur) {
@@ -160,7 +169,16 @@ static struct rpc_cmd cmds[] = {
 
 static const size_t cmd_count = sizeof(cmds) / sizeof(struct rpc_cmd);
 
+static void free_long_resp() {
+  if (long_resp_buf) {
+    free(long_resp_buf);
+    long_resp_buf = NULL;
+  }
+}
+
 static struct csrpc_resp handle_rpc_call(struct csrpc_call *call, void *ceed) {
+  free_long_resp();
+
   ceed = (editor*)ceed;
   unsigned int argc = call->argc;
   char **args = call->args;
@@ -181,6 +199,8 @@ void run_command(editor *ceed, char *cmd) {
   FILE* f = csrpc_run(cmd, "build/cfglib/ceed.sh",
       handle_rpc_call, ceed);
 
+  free_long_resp();
+
   size_t n = fread(ceed->status, 1, STATUS_LENGTH-1, f);
   ceed->status[n] = '\0';
   fclose(f);
@@ -190,4 +210,14 @@ void run_command(editor *ceed, char *cmd) {
     if (*s == '\n') *s = ' ';
     s++;
   }
+}
+
+void init_commands() {
+  char new_path[4096];
+  char *orig_path = getenv("PATH");
+  snprintf(new_path, sizeof(new_path),
+      "%s:%s", "./build/cfglib", orig_path);
+  setenv("PATH", new_path, 1);
+
+  setenv("IMPORT_CEED", ". \"$(command -v ceed.sh)\"", 1);
 }

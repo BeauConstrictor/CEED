@@ -1,0 +1,10 @@
+#!/bin/sh
+
+eval $IMPORT_CEED
+
+if send-cmd write "$@" > /dev/null; then
+    stat
+    printf "written"
+else
+    printf "${RED}No file name${RESET}"
+fi

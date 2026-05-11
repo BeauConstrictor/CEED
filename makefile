@@ -1,6 +1,9 @@
 CFGCMDS := $(wildcard src/cfglib/*)
 CFILES  := $(wildcard src/*.[ch])
 
+CCOMP := gcc
+CCARGS := -Wall -Wextra -Werror -Wno-unused-parameter
+
 all: ceed build/cfglib
 
 build/:
@@ -16,10 +19,10 @@ build/cfglib: $(CFGCMDS) csrpc
 	chmod +x build/cfglib/*
 
 ceed: $(CFILES) build/ csrpc
-	gcc -Wall -Wextra -Wno-unused-parameter src/*.c -o build/ceed -L./lib/csrpc/build/ \
+	$(CCOMP) $(CCARGS) src/*.c -o build/ceed -L./lib/csrpc/build/ \
 	  -lcsrpc -I./lib/csrpc/include
 
 .PHONY: all run
 
 run: all
-	build/ceed src/main.c
+	build/ceed --repl
